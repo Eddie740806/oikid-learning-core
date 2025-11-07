@@ -6,7 +6,7 @@ export default function Home() {
       <main className="max-w-4xl mx-auto py-16 px-4">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-black dark:text-zinc-50 mb-4">
-            業務學習系統
+            Oikid Learning Core
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-400">
             AI 自學模組 + 業務通話學習系統
