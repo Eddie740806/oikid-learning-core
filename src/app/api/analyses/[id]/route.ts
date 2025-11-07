@@ -1,0 +1,159 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { supabase } from '@/lib/supabase'
+
+// GET: 取得單一分析結果
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+
+    if (!id) {
+      return NextResponse.json(
+        { ok: false, error: 'Analysis ID is required' },
+        { status: 400 }
+      )
+    }
+
+    const { data, error } = await supabase
+      .from('analyses')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: 400 }
+      )
+    }
+
+    return NextResponse.json({ ok: true, data })
+  } catch (error) {
+    console.error('API error:', error)
+    return NextResponse.json(
+      { ok: false, error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+// PUT: 更新分析結果
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const body = await request.json()
+
+    if (!id) {
+      return NextResponse.json(
+        { ok: false, error: 'Analysis ID is required' },
+        { status: 400 }
+      )
+    }
+
+    const {
+      recording_id,
+      customer_id,
+      customer_name,
+      analysis_text,
+      analysis_json,
+      transcript,
+      customer_profile,
+      score,
+      tags,
+      notes,
+      salesperson_name,
+      recording_file_url,
+      analyzed_by,
+    } = body
+
+    // 驗證必要欄位
+    if (!analysis_text) {
+      return NextResponse.json(
+        { ok: false, error: 'analysis_text is required' },
+        { status: 400 }
+      )
+    }
+
+    const { data, error } = await supabase
+      .from('analyses')
+      .update({
+        recording_id: recording_id || null,
+        customer_id: customer_id || null,
+        customer_name: customer_name || null,
+        analysis_text,
+        analysis_json: analysis_json || null,
+        transcript: transcript || null,
+        customer_profile: customer_profile || null,
+        score: score || null,
+        tags: tags || null,
+        notes: notes || null,
+        salesperson_name: salesperson_name || null,
+        recording_file_url: recording_file_url || null,
+        analyzed_by: analyzed_by || 'manual',
+      })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: 400 }
+      )
+    }
+
+    return NextResponse.json({ ok: true, data })
+  } catch (error) {
+    console.error('API error:', error)
+    return NextResponse.json(
+      { ok: false, error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE: 刪除分析結果
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+
+    if (!id) {
+      return NextResponse.json(
+        { ok: false, error: 'Analysis ID is required' },
+        { status: 400 }
+      )
+    }
+
+    const { error } = await supabase
+      .from('analyses')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: 400 }
+      )
+    }
+
+    return NextResponse.json({ ok: true, message: 'Analysis deleted successfully' })
+  } catch (error) {
+    console.error('API error:', error)
+    return NextResponse.json(
+      { ok: false, error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
