@@ -59,18 +59,18 @@ export async function GET(request: NextRequest) {
     })
 
     // 業務統計
-    const salespersonStats: Record<string, { count: number; avgScore: number }> = {}
+    const salespersonStats: Record<string, { count: number; avgScore: number; scores?: number[] }> = {}
     allAnalyses.forEach((analysis: any) => {
       const name = analysis.salesperson_name || '未指定'
       if (!salespersonStats[name]) {
-        salespersonStats[name] = { count: 0, avgScore: 0, scores: [] as number[] }
+        salespersonStats[name] = { count: 0, avgScore: 0, scores: [] }
       }
       salespersonStats[name].count++
       if (analysis.score !== null && analysis.score !== undefined) {
         if (!salespersonStats[name].scores) {
           salespersonStats[name].scores = []
         }
-        salespersonStats[name].scores.push(analysis.score)
+        salespersonStats[name].scores!.push(analysis.score)
       }
     })
 
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
       const stats = salespersonStats[name]
       if (stats.scores && stats.scores.length > 0) {
         stats.avgScore = stats.scores.reduce((sum: number, s: number) => sum + s, 0) / stats.scores.length
-        delete (stats as any).scores
+        delete stats.scores
       }
     })
 

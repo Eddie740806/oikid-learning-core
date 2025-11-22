@@ -894,7 +894,7 @@ export default function AnalysesPage() {
                       onChange={(e) => handleSelectOne(analysis.id, e.target.checked)}
                       className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
                     />
-                  <div className="flex-1">
+                    <div className="flex-1">
                     <div className="flex items-center gap-3 flex-wrap">
                       {/* 日期 */}
                       <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
@@ -935,6 +935,7 @@ export default function AnalysesPage() {
                           ))}
                         </div>
                       )}
+                    </div>
                     </div>
                   </div>
                   
