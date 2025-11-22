@@ -35,6 +35,23 @@ export default function AnalysesPage() {
     tags: '',
   })
   const [showFilters, setShowFilters] = useState(false)
+  
+  // 批量選擇
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showBatchActions, setShowBatchActions] = useState(false)
+  
+  // 排序
+  const [sortBy, setSortBy] = useState<'created_at' | 'score' | 'salesperson_name' | 'customer_name'>('created_at')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  
+  // 批量編輯
+  const [showBatchEdit, setShowBatchEdit] = useState(false)
+  const [batchEditFields, setBatchEditFields] = useState({
+    salesperson_name: '',
+    tags: '',
+    score: '',
+    customer_name: '',
+  })
 
   useEffect(() => {
     fetchAllAnalyses() // 先載入全部資料以取得業務名和標籤列表
@@ -98,7 +115,10 @@ export default function AnalysesPage() {
       const result = await response.json()
 
       if (result.ok) {
-        setAnalyses(result.data || [])
+        const data = result.data || []
+        // 套用排序
+        const sortedData = sortAnalyses(data)
+        setAnalyses(sortedData)
       } else {
         setError(result.error || '載入失敗')
       }
@@ -129,6 +149,172 @@ export default function AnalysesPage() {
     setTimeout(() => {
       fetchAnalyses()
     }, 100)
+  }
+
+  // 排序功能
+  const sortAnalyses = (data: Analysis[]) => {
+    const sorted = [...data]
+    sorted.sort((a, b) => {
+      let aVal: any
+      let bVal: any
+      
+      switch (sortBy) {
+        case 'created_at':
+          aVal = new Date(a.created_at).getTime()
+          bVal = new Date(b.created_at).getTime()
+          break
+        case 'score':
+          aVal = a.score ?? -1
+          bVal = b.score ?? -1
+          break
+        case 'salesperson_name':
+          aVal = a.salesperson_name || ''
+          bVal = b.salesperson_name || ''
+          break
+        case 'customer_name':
+          aVal = a.customer_name || ''
+          bVal = b.customer_name || ''
+          break
+        default:
+          return 0
+      }
+      
+      if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1
+      if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1
+      return 0
+    })
+    
+    return sorted
+  }
+
+  // 處理排序變更
+  const handleSortChange = (field: 'created_at' | 'score' | 'salesperson_name' | 'customer_name') => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortBy(field)
+      setSortOrder('desc')
+    }
+    // 重新排序現有資料
+    const sorted = sortAnalyses(analyses)
+    setAnalyses(sorted)
+  }
+
+  // 批量選擇
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(analyses.map(a => a.id)))
+      setShowBatchActions(true)
+    } else {
+      setSelectedIds(new Set())
+      setShowBatchActions(false)
+    }
+  }
+
+  const handleSelectOne = (id: string, checked: boolean) => {
+    const newSelected = new Set(selectedIds)
+    if (checked) {
+      newSelected.add(id)
+    } else {
+      newSelected.delete(id)
+    }
+    setSelectedIds(newSelected)
+    setShowBatchActions(newSelected.size > 0)
+  }
+
+  // 批量刪除
+  const handleBatchDelete = async () => {
+    if (selectedIds.size === 0) return
+    
+    if (!confirm(`確定要刪除選取的 ${selectedIds.size} 筆分析結果嗎？此操作無法復原。`)) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/analyses/batch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ids: Array.from(selectedIds),
+          action: 'delete',
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.ok) {
+        setSelectedIds(new Set())
+        setShowBatchActions(false)
+        fetchAnalyses()
+        alert(`成功刪除 ${selectedIds.size} 筆分析結果`)
+      } else {
+        alert(result.error || '批量刪除失敗')
+      }
+    } catch (error) {
+      console.error('Batch delete error:', error)
+      alert('批量刪除時發生錯誤')
+    }
+  }
+
+  // 批量編輯
+  const handleBatchEdit = async () => {
+    if (selectedIds.size === 0) return
+
+    const fields: any = {}
+    if (batchEditFields.salesperson_name) {
+      fields.salesperson_name = batchEditFields.salesperson_name
+    }
+    if (batchEditFields.tags) {
+      fields.tags = batchEditFields.tags.split(',').map(t => t.trim()).filter(t => t)
+    }
+    if (batchEditFields.score) {
+      fields.score = batchEditFields.score
+    }
+    if (batchEditFields.customer_name) {
+      fields.customer_name = batchEditFields.customer_name
+    }
+
+    if (Object.keys(fields).length === 0) {
+      alert('請至少填寫一個要更新的欄位')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/analyses/batch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ids: Array.from(selectedIds),
+          action: 'update',
+          fields,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.ok) {
+        setSelectedIds(new Set())
+        setShowBatchActions(false)
+        setShowBatchEdit(false)
+        setBatchEditFields({
+          salesperson_name: '',
+          tags: '',
+          score: '',
+          customer_name: '',
+        })
+        fetchAnalyses()
+        alert(`成功更新 ${selectedIds.size} 筆分析結果`)
+      } else {
+        alert(result.error || '批量更新失敗')
+      }
+    } catch (error) {
+      console.error('Batch update error:', error)
+      alert('批量更新時發生錯誤')
+    }
   }
 
   const handleDelete = async (id: string) => {
@@ -343,12 +529,18 @@ export default function AnalysesPage() {
                 )}
               </p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap">
               <button
                 onClick={() => router.push('/')}
                 className="bg-zinc-600 hover:bg-zinc-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
               >
                 🏠 回到首頁
+              </button>
+              <button
+                onClick={() => router.push('/analyses/stats')}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+              >
+                📊 統計儀表板
               </button>
               <button
                 onClick={() => setShowFilters(!showFilters)}
@@ -484,6 +676,173 @@ export default function AnalysesPage() {
               </div>
             </div>
           )}
+
+          {/* 排序控制 */}
+          {analyses.length > 0 && (
+            <div className="bg-white dark:bg-zinc-900 p-4 rounded-lg shadow mb-4">
+              <div className="flex items-center gap-4 flex-wrap">
+                <span className="text-sm font-medium text-black dark:text-zinc-50">排序方式：</span>
+                <button
+                  onClick={() => handleSortChange('created_at')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    sortBy === 'created_at'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-zinc-200 dark:bg-zinc-700 text-black dark:text-zinc-50 hover:bg-zinc-300 dark:hover:bg-zinc-600'
+                  }`}
+                >
+                  日期 {sortBy === 'created_at' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </button>
+                <button
+                  onClick={() => handleSortChange('score')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    sortBy === 'score'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-zinc-200 dark:bg-zinc-700 text-black dark:text-zinc-50 hover:bg-zinc-300 dark:hover:bg-zinc-600'
+                  }`}
+                >
+                  評分 {sortBy === 'score' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </button>
+                <button
+                  onClick={() => handleSortChange('salesperson_name')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    sortBy === 'salesperson_name'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-zinc-200 dark:bg-zinc-700 text-black dark:text-zinc-50 hover:bg-zinc-300 dark:hover:bg-zinc-600'
+                  }`}
+                >
+                  業務名 {sortBy === 'salesperson_name' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </button>
+                <button
+                  onClick={() => handleSortChange('customer_name')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    sortBy === 'customer_name'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-zinc-200 dark:bg-zinc-700 text-black dark:text-zinc-50 hover:bg-zinc-300 dark:hover:bg-zinc-600'
+                  }`}
+                >
+                  客戶名 {sortBy === 'customer_name' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 批量操作工具列 */}
+          {showBatchActions && selectedIds.size > 0 && (
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-400 dark:border-yellow-600 p-4 rounded-lg mb-4">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-black dark:text-zinc-50">
+                    已選取 {selectedIds.size} 筆
+                  </span>
+                  <button
+                    onClick={() => {
+                      setSelectedIds(new Set())
+                      setShowBatchActions(false)
+                      setShowBatchEdit(false)
+                    }}
+                    className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                  >
+                    取消選擇
+                  </button>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowBatchEdit(!showBatchEdit)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+                  >
+                    ✏️ 批量編輯
+                  </button>
+                  <button
+                    onClick={handleBatchDelete}
+                    className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+                  >
+                    🗑️ 批量刪除
+                  </button>
+                </div>
+              </div>
+
+              {/* 批量編輯表單 */}
+              {showBatchEdit && (
+                <div className="mt-4 p-4 bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                  <h4 className="text-sm font-semibold text-black dark:text-zinc-50 mb-3">批量更新欄位（留空則不更新）：</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-black dark:text-zinc-50 mb-1">
+                        業務名
+                      </label>
+                      <input
+                        type="text"
+                        value={batchEditFields.salesperson_name}
+                        onChange={(e) => setBatchEditFields({ ...batchEditFields, salesperson_name: e.target.value })}
+                        className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-black dark:text-zinc-50 text-sm"
+                        placeholder="留空則不更新"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-black dark:text-zinc-50 mb-1">
+                        客戶名
+                      </label>
+                      <input
+                        type="text"
+                        value={batchEditFields.customer_name}
+                        onChange={(e) => setBatchEditFields({ ...batchEditFields, customer_name: e.target.value })}
+                        className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-black dark:text-zinc-50 text-sm"
+                        placeholder="留空則不更新"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-black dark:text-zinc-50 mb-1">
+                        標籤（用逗號分隔）
+                      </label>
+                      <input
+                        type="text"
+                        value={batchEditFields.tags}
+                        onChange={(e) => setBatchEditFields({ ...batchEditFields, tags: e.target.value })}
+                        className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-black dark:text-zinc-50 text-sm"
+                        placeholder="例如: 標籤1, 標籤2"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-black dark:text-zinc-50 mb-1">
+                        評分
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={batchEditFields.score}
+                        onChange={(e) => setBatchEditFields({ ...batchEditFields, score: e.target.value })}
+                        className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-black dark:text-zinc-50 text-sm"
+                        placeholder="0-100"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-3 mt-4">
+                    <button
+                      onClick={handleBatchEdit}
+                      className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+                    >
+                      確認更新
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowBatchEdit(false)
+                        setBatchEditFields({
+                          salesperson_name: '',
+                          tags: '',
+                          score: '',
+                          customer_name: '',
+                        })
+                      }}
+                      className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+                    >
+                      取消
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {loading ? (
@@ -506,12 +865,35 @@ export default function AnalysesPage() {
           </div>
         ) : (
           <div className="space-y-4">
+            {/* 全選控制 */}
+            {analyses.length > 0 && (
+              <div className="bg-white dark:bg-zinc-900 p-4 rounded-lg shadow flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.size === analyses.length && analyses.length > 0}
+                  onChange={(e) => handleSelectAll(e.target.checked)}
+                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-black dark:text-zinc-50">
+                  全選 ({selectedIds.size}/{analyses.length})
+                </span>
+              </div>
+            )}
             {analyses.map((analysis) => (
               <div
                 key={analysis.id}
-                className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow hover:shadow-lg transition-shadow"
+                className={`bg-white dark:bg-zinc-900 p-6 rounded-lg shadow hover:shadow-lg transition-shadow ${
+                  selectedIds.has(analysis.id) ? 'ring-2 ring-blue-500' : ''
+                }`}
               >
                 <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(analysis.id)}
+                      onChange={(e) => handleSelectOne(analysis.id, e.target.checked)}
+                      className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                    />
                   <div className="flex-1">
                     <div className="flex items-center gap-3 flex-wrap">
                       {/* 日期 */}
