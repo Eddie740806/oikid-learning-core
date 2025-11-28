@@ -980,7 +980,7 @@ export default function AnalysesPage() {
                     {/* 客戶名字（如果有） */}
                     {analysis.customer_name && (
                       <div>
-                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
+                        <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">
                           客戶名字：
                         </h3>
                         <p className="text-black dark:text-zinc-50">{analysis.customer_name}</p>
@@ -990,7 +990,7 @@ export default function AnalysesPage() {
                     {/* 新的分析欄位 - 使用格式化顯示 */}
                     {analysis.performance_analysis && (
                       <div>
-                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4">
+                        <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-4">
                           業務表現深度分析：
                         </h3>
                         <div className="text-black dark:text-zinc-50">
@@ -1205,7 +1205,7 @@ export default function AnalysesPage() {
 
                     {analysis.highlights_improvements && (
                       <div>
-                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4">
+                        <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-4">
                           亮點與改進點：
                         </h3>
                         <div className="text-black dark:text-zinc-50">
@@ -1295,7 +1295,7 @@ export default function AnalysesPage() {
 
                     {analysis.improvement_suggestions && (
                       <div>
-                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4">
+                        <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-4">
                           具體改善建議：
                         </h3>
                         <div className="text-black dark:text-zinc-50">
@@ -1397,7 +1397,7 @@ export default function AnalysesPage() {
 
                     {analysis.score_tags && (
                       <div>
-                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4">
+                        <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-4">
                           評分與標籤：
                         </h3>
                         <div className="text-black dark:text-zinc-50">
@@ -1500,7 +1500,7 @@ export default function AnalysesPage() {
                     {/* 分析結果（向後兼容舊資料） */}
                     {analysis.analysis_text && !analysis.performance_analysis && (
                     <div>
-                      <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4">
+                      <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-4">
                         分析結果：
                       </h3>
                       <div className="text-black dark:text-zinc-50">
@@ -1634,7 +1634,7 @@ export default function AnalysesPage() {
                     {/* 客戶畫像 */}
                     {analysis.customer_profile && (
                       <div>
-                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
+                        <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">
                           客戶畫像：
                         </h3>
                         <div className="text-black dark:text-zinc-50 whitespace-pre-wrap bg-zinc-50 dark:bg-zinc-800/30 rounded-lg p-4">
@@ -1646,7 +1646,7 @@ export default function AnalysesPage() {
                     {/* 通話過程中提出的所有問題 */}
                     {analysis.customer_questions && (
                       <div>
-                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
+                        <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">
                           通話過程中提出的所有問題，依照時間順序排列：
                         </h3>
                         <div className="text-black dark:text-zinc-50 whitespace-pre-wrap bg-zinc-50 dark:bg-zinc-800/30 rounded-lg p-4">
@@ -1670,7 +1670,7 @@ export default function AnalysesPage() {
                     {/* 備註 */}
                     {analysis.notes && (
                       <div>
-                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
+                        <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">
                           備註：
                         </h3>
                         <p className="text-black dark:text-zinc-50">{analysis.notes}</p>
@@ -1680,7 +1680,7 @@ export default function AnalysesPage() {
                     {/* 錄音檔 */}
                     {analysis.recording_file_url && (
                       <div>
-                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
+                        <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">
                           錄音檔：
                         </h3>
                         <a
