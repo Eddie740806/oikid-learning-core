@@ -13,6 +13,7 @@ interface Analysis {
   score_tags: string | null // 評分與標籤
   transcript: string | null
   customer_profile: string | null
+  customer_questions: string | null // 通話過程中提出的所有問題，依照時間順序排列
   score: number | null
   tags: string[] | null
   notes: string | null
@@ -1171,8 +1172,20 @@ export default function AnalysesPage() {
                         <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
                           客戶畫像：
                         </h3>
-                        <div className="text-black dark:text-zinc-50 whitespace-pre-wrap">
+                        <div className="text-black dark:text-zinc-50 whitespace-pre-wrap bg-zinc-50 dark:bg-zinc-800/30 rounded-lg p-4">
                           {analysis.customer_profile}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 通話過程中提出的所有問題 */}
+                    {analysis.customer_questions && (
+                      <div>
+                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
+                          通話過程中提出的所有問題，依照時間順序排列：
+                        </h3>
+                        <div className="text-black dark:text-zinc-50 whitespace-pre-wrap bg-zinc-50 dark:bg-zinc-800/30 rounded-lg p-4">
+                          {analysis.customer_questions}
                         </div>
                       </div>
                     )}

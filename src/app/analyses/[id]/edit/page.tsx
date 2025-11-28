@@ -17,6 +17,7 @@ export default function EditAnalysisPage() {
     highlights_improvements: '', // 亮點與改進點（必填）
     improvement_suggestions: '', // 具體改善建議（必填）
     score_tags: '', // 評分與標籤（必填）
+    customer_questions: '', // 通話過程中提出的所有問題，依照時間順序排列（可選）
     transcript: '', // 逐字稿（可選）
     customer_profile: '', // 客戶畫像（可選）
     notes: '', // 備註（可選）
@@ -51,6 +52,7 @@ export default function EditAnalysisPage() {
           highlights_improvements: analysis.highlights_improvements || '',
           improvement_suggestions: analysis.improvement_suggestions || '',
           score_tags: analysis.score_tags || '',
+          customer_questions: analysis.customer_questions || '',
           transcript: analysis.transcript || '',
           customer_profile: analysis.customer_profile || '',
           notes: analysis.notes || '',
@@ -134,6 +136,7 @@ export default function EditAnalysisPage() {
           improvement_suggestions: formData.improvement_suggestions,
           score_tags: formData.score_tags,
           // 可選欄位
+          customer_questions: formData.customer_questions || null,
           transcript: formData.transcript || null,
           customer_profile: formData.customer_profile || null,
           notes: formData.notes || null,
@@ -293,6 +296,19 @@ export default function EditAnalysisPage() {
                 rows={6}
                 className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="描述客戶的特徵、需求、偏好等畫像資訊..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-black dark:text-zinc-50 mb-2">
+                通話過程中提出的所有問題，依照時間順序排列（可選）
+              </label>
+              <textarea
+                value={formData.customer_questions}
+                onChange={(e) => setFormData({ ...formData, customer_questions: e.target.value })}
+                rows={6}
+                className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="例如：[00:30] 第一個問題：...&#10;[02:15] 第二個問題：...&#10;[05:40] 第三個問題：..."
               />
             </div>
 
