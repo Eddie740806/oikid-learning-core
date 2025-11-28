@@ -903,7 +903,7 @@ export default function AnalysesPage() {
                       onChange={(e) => handleSelectOne(analysis.id, e.target.checked)}
                       className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
                     />
-                    <div className="flex-1">
+                  <div className="flex-1">
                     <div className="flex items-center gap-3 flex-wrap">
                       {/* 日期 */}
                       <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
@@ -987,59 +987,441 @@ export default function AnalysesPage() {
                       </div>
                     )}
 
-                    {/* 新的分析欄位 */}
+                    {/* 新的分析欄位 - 使用格式化顯示 */}
                     {analysis.performance_analysis && (
                       <div>
-                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
+                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4">
                           業務表現深度分析：
                         </h3>
-                        <div className="text-black dark:text-zinc-50 whitespace-pre-wrap bg-zinc-50 dark:bg-zinc-800/30 rounded-lg p-4">
-                          {analysis.performance_analysis}
+                        <div className="text-black dark:text-zinc-50">
+                          <div className="space-y-4">
+                            {formatAnalysisText(analysis.performance_analysis)
+                            .split('\n\n')
+                            .filter(p => p.trim())
+                            .map((paragraph, idx) => {
+                              const trimmed = paragraph.trim()
+                              if (!trimmed) return null
+                              
+                              // 檢查是否為大標題（如「第二部分:業務表現深度分析」）
+                              const isMainHeading = /^[第][一二三四五六七八九十\d]+[部分節項]/.test(trimmed)
+                              
+                              // 檢查是否為中標題（如「A. 溝通技巧 (18/25)」）
+                              const isSubHeading = /^[A-Z][.、：:]\s*/.test(trimmed) && 
+                                                   (trimmed.includes('分') || trimmed.includes('(') || trimmed.length < 60)
+                              
+                              // 檢查是否為小標題（如「語氣與親和力:」或「**語氣與親和力**」）
+                              const isSmallHeading = /^[*]{1,2}[^*]+\*{0,2}[:：]/.test(trimmed) || 
+                                                     /^[^：:]+[:：]\s*$/.test(trimmed) ||
+                                                     (/^[*]{2}/.test(trimmed) && trimmed.length < 50)
+                              
+                              // 檢查是否為列表項
+                              const isListItem = /^[*•·▪▫○●■□▲△]\s*/.test(trimmed) ||
+                                                /^[（(][一二三四五六七八九十\d]+[）)]\s*/.test(trimmed) ||
+                                                /^\d+[.、]\s*/.test(trimmed)
+                              
+                              // 大標題樣式
+                              if (isMainHeading) {
+                                return (
+                                  <div key={idx} className="mt-6 mb-4 first:mt-0">
+                                    <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
+                                      {trimmed}
+                                    </h2>
+                                  </div>
+                                )
+                              }
+                              
+                              // 中標題樣式（有背景色區分）
+                              if (isSubHeading) {
+                                // 提取評分
+                                const scoreMatch = trimmed.match(/\(([^)]+分?)\)/)
+                                const scoreText = scoreMatch ? scoreMatch[1] : ''
+                                const titleText = trimmed.replace(/\([^)]+分?\)/, '').trim()
+                                
+                                return (
+                                  <div key={idx} className="bg-zinc-50 dark:bg-zinc-800/50 rounded-lg p-4 mb-4 border border-zinc-200 dark:border-zinc-700">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                                        {titleText}
+                                      </h3>
+                                      {scoreText && (
+                                        <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded text-sm font-medium">
+                                          {scoreText}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )
+                              }
+                              
+                              // 小標題樣式（處理粗體）
+                              if (isSmallHeading) {
+                                const cleanText = trimmed.replace(/^[*]{1,2}|\*{1,2}$/g, '').replace(/[:：]\s*$/, '').trim()
+                                return (
+                                  <div key={idx} className="mt-4 mb-2">
+                                    <h4 className="text-base font-semibold text-zinc-800 dark:text-zinc-200">
+                                      {cleanText}
+                                    </h4>
+                                  </div>
+                                )
+                              }
+                              
+                              // 列表項樣式
+                              if (isListItem) {
+                                const cleanText = trimmed
+                                  .replace(/^[*•·▪▫○●■□▲△]\s*/, '')
+                                  .replace(/^[（(][一二三四五六七八九十\d]+[）)]\s*/, '')
+                                  .replace(/^\d+[.、]\s*/, '')
+                                
+                                const parts = cleanText.split(/(\*\*[^*]+\*\*)/g)
+                                
+                                return (
+                                  <div key={idx} className="ml-4 mb-2">
+                                    <span className="text-zinc-600 dark:text-zinc-400 mr-2">•</span>
+                                    <span className="text-zinc-800 dark:text-zinc-200">
+                                      {parts.map((part, partIdx) => {
+                                        if (part.startsWith('**') && part.endsWith('**')) {
+                                          return <strong key={partIdx} className="font-semibold">{part.slice(2, -2)}</strong>
+                                        }
+                                        return <span key={partIdx}>{part}</span>
+                                      })}
+                                    </span>
+                                  </div>
+                                )
+                              }
+                              
+                              // 正文樣式（處理粗體和換行）
+                              return (
+                                <div key={idx} className="bg-zinc-50 dark:bg-zinc-800/30 rounded-lg p-4 mb-3">
+                                  <div className="text-zinc-800 dark:text-zinc-200 leading-7 text-base">
+                                    {trimmed.split('\n').map((line, lineIdx) => {
+                                      const trimmedLine = line.trim()
+                                      if (!trimmedLine) return null
+                                      
+                                      // 處理粗體文字
+                                      const parts = trimmedLine.split(/(\*\*[^*]+\*\*)/g)
+                                      
+                                      return (
+                                        <p key={lineIdx} className="mb-2 last:mb-0">
+                                          {parts.map((part, partIdx) => {
+                                            if (part.startsWith('**') && part.endsWith('**')) {
+                                              return <strong key={partIdx} className="font-semibold">{part.slice(2, -2)}</strong>
+                                            }
+                                            return <span key={partIdx}>{part}</span>
+                                          })}
+                                        </p>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
                         </div>
                       </div>
                     )}
 
                     {analysis.highlights_improvements && (
                       <div>
-                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
+                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4">
                           亮點與改進點：
                         </h3>
-                        <div className="text-black dark:text-zinc-50 whitespace-pre-wrap bg-zinc-50 dark:bg-zinc-800/30 rounded-lg p-4">
-                          {analysis.highlights_improvements}
+                        <div className="text-black dark:text-zinc-50">
+                          <div className="space-y-4">
+                            {formatAnalysisText(analysis.highlights_improvements)
+                            .split('\n\n')
+                            .filter(p => p.trim())
+                            .map((paragraph, idx) => {
+                              const trimmed = paragraph.trim()
+                              if (!trimmed) return null
+                              
+                              // 檢查是否為標題（如「亮點」或「改進點」）
+                              const isHeading = /^[第][一二三四五六七八九十\d]+[部分節項]/.test(trimmed) ||
+                                               /^[亮改][點項]/.test(trimmed) ||
+                                               (/^[*]{1,2}[^*]+\*{0,2}/.test(trimmed) && trimmed.length < 30)
+                              
+                              // 檢查是否為列表項
+                              const isListItem = /^[*•·▪▫○●■□▲△]\s*/.test(trimmed) ||
+                                                /^[（(][一二三四五六七八九十\d]+[）)]\s*/.test(trimmed) ||
+                                                /^\d+[.、]\s*/.test(trimmed)
+                              
+                              // 標題樣式
+                              if (isHeading) {
+                                const cleanText = trimmed.replace(/^[*]{1,2}|\*{1,2}$/g, '').trim()
+                                return (
+                                  <div key={idx} className="mt-4 mb-3">
+                                    <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                                      {cleanText}
+                                    </h3>
+                                  </div>
+                                )
+                              }
+                              
+                              // 列表項樣式
+                              if (isListItem) {
+                                const cleanText = trimmed
+                                  .replace(/^[*•·▪▫○●■□▲△]\s*/, '')
+                                  .replace(/^[（(][一二三四五六七八九十\d]+[）)]\s*/, '')
+                                  .replace(/^\d+[.、]\s*/, '')
+                                
+                                const parts = cleanText.split(/(\*\*[^*]+\*\*)/g)
+                                
+                                return (
+                                  <div key={idx} className="ml-4 mb-3">
+                                    <span className="text-zinc-600 dark:text-zinc-400 mr-2">•</span>
+                                    <span className="text-zinc-800 dark:text-zinc-200">
+                                      {parts.map((part, partIdx) => {
+                                        if (part.startsWith('**') && part.endsWith('**')) {
+                                          return <strong key={partIdx} className="font-semibold">{part.slice(2, -2)}</strong>
+                                        }
+                                        return <span key={partIdx}>{part}</span>
+                                      })}
+                                    </span>
+                                  </div>
+                                )
+                              }
+                              
+                              // 正文樣式
+                              return (
+                                <div key={idx} className="bg-zinc-50 dark:bg-zinc-800/30 rounded-lg p-4 mb-3">
+                                  <div className="text-zinc-800 dark:text-zinc-200 leading-7 text-base">
+                                    {trimmed.split('\n').map((line, lineIdx) => {
+                                      const trimmedLine = line.trim()
+                                      if (!trimmedLine) return null
+                                      
+                                      const parts = trimmedLine.split(/(\*\*[^*]+\*\*)/g)
+                                      
+                                      return (
+                                        <p key={lineIdx} className="mb-2 last:mb-0">
+                                          {parts.map((part, partIdx) => {
+                                            if (part.startsWith('**') && part.endsWith('**')) {
+                                              return <strong key={partIdx} className="font-semibold">{part.slice(2, -2)}</strong>
+                                            }
+                                            return <span key={partIdx}>{part}</span>
+                                          })}
+                                        </p>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
                         </div>
                       </div>
                     )}
 
                     {analysis.improvement_suggestions && (
                       <div>
-                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
+                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4">
                           具體改善建議：
                         </h3>
-                        <div className="text-black dark:text-zinc-50 whitespace-pre-wrap bg-zinc-50 dark:bg-zinc-800/30 rounded-lg p-4">
-                          {analysis.improvement_suggestions}
+                        <div className="text-black dark:text-zinc-50">
+                          <div className="space-y-4">
+                            {formatAnalysisText(analysis.improvement_suggestions)
+                            .split('\n\n')
+                            .filter(p => p.trim())
+                            .map((paragraph, idx) => {
+                              const trimmed = paragraph.trim()
+                              if (!trimmed) return null
+                              
+                              // 檢查是否為標題（如「1. 強化收單」）
+                              const isHeading = /^[第][一二三四五六七八九十\d]+[部分節項]/.test(trimmed) ||
+                                               /^\d+[.、]\s*[^。！？\n]{1,30}[：:]/.test(trimmed)
+                              
+                              // 檢查是否為子標題（如「問題:」或「改善方法:」）
+                              const isSubHeading = /^[*]{1,2}?[^：:]+[:：]\s*$/.test(trimmed) ||
+                                                   /^[問題改善話練習修正][題方法例向前後][：:]\s*$/.test(trimmed)
+                              
+                              // 檢查是否為列表項
+                              const isListItem = /^[*•·▪▫○●■□▲△]\s*/.test(trimmed) ||
+                                                /^[（(][一二三四五六七八九十\d]+[）)]\s*/.test(trimmed)
+                              
+                              // 標題樣式
+                              if (isHeading) {
+                                return (
+                                  <div key={idx} className="mt-4 mb-3">
+                                    <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                                      {trimmed}
+                                    </h3>
+                                  </div>
+                                )
+                              }
+                              
+                              // 子標題樣式
+                              if (isSubHeading) {
+                                const cleanText = trimmed.replace(/^[*]{1,2}|\*{1,2}$/g, '').replace(/[:：]\s*$/, '').trim()
+                                return (
+                                  <div key={idx} className="mt-3 mb-2">
+                                    <h4 className="text-base font-semibold text-zinc-800 dark:text-zinc-200">
+                                      {cleanText}
+                                    </h4>
+                                  </div>
+                                )
+                              }
+                              
+                              // 列表項樣式
+                              if (isListItem) {
+                                const cleanText = trimmed
+                                  .replace(/^[*•·▪▫○●■□▲△]\s*/, '')
+                                  .replace(/^[（(][一二三四五六七八九十\d]+[）)]\s*/, '')
+                                
+                                const parts = cleanText.split(/(\*\*[^*]+\*\*)/g)
+                                
+                                return (
+                                  <div key={idx} className="ml-4 mb-2">
+                                    <span className="text-zinc-600 dark:text-zinc-400 mr-2">•</span>
+                                    <span className="text-zinc-800 dark:text-zinc-200">
+                                      {parts.map((part, partIdx) => {
+                                        if (part.startsWith('**') && part.endsWith('**')) {
+                                          return <strong key={partIdx} className="font-semibold">{part.slice(2, -2)}</strong>
+                                        }
+                                        return <span key={partIdx}>{part}</span>
+                                      })}
+                                    </span>
+                                  </div>
+                                )
+                              }
+                              
+                              // 正文樣式
+                              return (
+                                <div key={idx} className="bg-zinc-50 dark:bg-zinc-800/30 rounded-lg p-4 mb-3">
+                                  <div className="text-zinc-800 dark:text-zinc-200 leading-7 text-base">
+                                    {trimmed.split('\n').map((line, lineIdx) => {
+                                      const trimmedLine = line.trim()
+                                      if (!trimmedLine) return null
+                                      
+                                      const parts = trimmedLine.split(/(\*\*[^*]+\*\*)/g)
+                                      
+                                      return (
+                                        <p key={lineIdx} className="mb-2 last:mb-0">
+                                          {parts.map((part, partIdx) => {
+                                            if (part.startsWith('**') && part.endsWith('**')) {
+                                              return <strong key={partIdx} className="font-semibold">{part.slice(2, -2)}</strong>
+                                            }
+                                            return <span key={partIdx}>{part}</span>
+                                          })}
+                                        </p>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
                         </div>
                       </div>
                     )}
 
                     {analysis.score_tags && (
                       <div>
-                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
+                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4">
                           評分與標籤：
                         </h3>
-                        <div className="text-black dark:text-zinc-50 whitespace-pre-wrap bg-zinc-50 dark:bg-zinc-800/30 rounded-lg p-4">
-                          {analysis.score_tags}
+                        <div className="text-black dark:text-zinc-50">
+                          <div className="space-y-4">
+                            {formatAnalysisText(analysis.score_tags)
+                            .split('\n\n')
+                            .filter(p => p.trim())
+                            .map((paragraph, idx) => {
+                              const trimmed = paragraph.trim()
+                              if (!trimmed) return null
+                              
+                              // 檢查是否為標題（如「綜合評分:」或「評分理由:」）
+                              const isHeading = /^[第][一二三四五六七八九十\d]+[部分節項]/.test(trimmed) ||
+                                               /^[綜合評分理由建議][評分由標籤][：:]\s*/.test(trimmed) ||
+                                               /^\d+\/\d+/.test(trimmed)
+                              
+                              // 檢查是否為子標題（如「優點:」或「扣分:」）
+                              const isSubHeading = /^[優扣建][點分議][：:]\s*$/.test(trimmed) ||
+                                                   /^[標][籤][：:]\s*$/.test(trimmed)
+                              
+                              // 檢查是否為列表項（標籤）
+                              const isListItem = /^[*•·▪▫○●■□▲△#]\s*/.test(trimmed) ||
+                                                /^[（(][一二三四五六七八九十\d]+[）)]\s*/.test(trimmed)
+                              
+                              // 標題樣式
+                              if (isHeading) {
+                                return (
+                                  <div key={idx} className="mt-4 mb-3">
+                                    <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                                      {trimmed}
+                                    </h3>
+                                  </div>
+                                )
+                              }
+                              
+                              // 子標題樣式
+                              if (isSubHeading) {
+                                return (
+                                  <div key={idx} className="mt-3 mb-2">
+                                    <h4 className="text-base font-semibold text-zinc-800 dark:text-zinc-200">
+                                      {trimmed}
+                                    </h4>
+                                  </div>
+                                )
+                              }
+                              
+                              // 列表項樣式（標籤）
+                              if (isListItem) {
+                                const cleanText = trimmed
+                                  .replace(/^[*•·▪▫○●■□▲△#]\s*/, '')
+                                  .replace(/^[（(][一二三四五六七八九十\d]+[）)]\s*/, '')
+                                
+                                const parts = cleanText.split(/(\*\*[^*]+\*\*)/g)
+                                
+                                return (
+                                  <div key={idx} className="ml-4 mb-2">
+                                    <span className="text-zinc-600 dark:text-zinc-400 mr-2">•</span>
+                                    <span className="text-zinc-800 dark:text-zinc-200">
+                                      {parts.map((part, partIdx) => {
+                                        if (part.startsWith('**') && part.endsWith('**')) {
+                                          return <strong key={partIdx} className="font-semibold">{part.slice(2, -2)}</strong>
+                                        }
+                                        return <span key={partIdx}>{part}</span>
+                                      })}
+                                    </span>
+                                  </div>
+                                )
+                              }
+                              
+                              // 正文樣式
+                              return (
+                                <div key={idx} className="bg-zinc-50 dark:bg-zinc-800/30 rounded-lg p-4 mb-3">
+                                  <div className="text-zinc-800 dark:text-zinc-200 leading-7 text-base">
+                                    {trimmed.split('\n').map((line, lineIdx) => {
+                                      const trimmedLine = line.trim()
+                                      if (!trimmedLine) return null
+                                      
+                                      const parts = trimmedLine.split(/(\*\*[^*]+\*\*)/g)
+                                      
+                                      return (
+                                        <p key={lineIdx} className="mb-2 last:mb-0">
+                                          {parts.map((part, partIdx) => {
+                                            if (part.startsWith('**') && part.endsWith('**')) {
+                                              return <strong key={partIdx} className="font-semibold">{part.slice(2, -2)}</strong>
+                                            }
+                                            return <span key={partIdx}>{part}</span>
+                                          })}
+                                        </p>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
                         </div>
                       </div>
                     )}
 
                     {/* 分析結果（向後兼容舊資料） */}
                     {analysis.analysis_text && !analysis.performance_analysis && (
-                      <div>
-                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4">
-                          分析結果：
-                        </h3>
-                        <div className="text-black dark:text-zinc-50">
-                          <div className="space-y-4">
+                    <div>
+                      <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4">
+                        分析結果：
+                      </h3>
+                      <div className="text-black dark:text-zinc-50">
+                        <div className="space-y-4">
                             {formatAnalysisText(analysis.analysis_text || '')
                             .split('\n\n')
                             .filter(p => p.trim())
@@ -1161,9 +1543,9 @@ export default function AnalysesPage() {
                                 </div>
                               )
                             })}
-                          </div>
                         </div>
                       </div>
+                    </div>
                     )}
 
                     {/* 客戶畫像 */}
