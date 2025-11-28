@@ -1039,7 +1039,7 @@ export default function AnalysesPage() {
                         </h3>
                         <div className="text-black dark:text-zinc-50">
                           <div className="space-y-4">
-                            {formatAnalysisText(analysis.analysis_text)
+                            {formatAnalysisText(analysis.analysis_text || '')
                             .split('\n\n')
                             .filter(p => p.trim())
                             .map((paragraph, idx) => {
@@ -1160,9 +1160,10 @@ export default function AnalysesPage() {
                                 </div>
                               )
                             })}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* 客戶畫像 */}
                     {analysis.customer_profile && (
