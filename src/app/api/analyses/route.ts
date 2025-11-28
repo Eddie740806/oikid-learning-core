@@ -2,8 +2,32 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
 // POST: 新增分析結果
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+export const maxDuration = 60
+
 export async function POST(request: NextRequest) {
   try {
+    // 檢查請求大小（Vercel 限制為 4.5MB）
+    const contentLength = request.headers.get('content-length')
+    if (contentLength) {
+      const sizeInMB = parseInt(contentLength) / (1024 * 1024)
+      if (sizeInMB > 4.5) {
+        return NextResponse.json(
+          { 
+            ok: false, 
+            error: `請求數據過大 (${sizeInMB.toFixed(2)}MB)，超過 Vercel 的 4.5MB 限制。請減少文字內容或分開提交。`,
+            details: {
+              errorType: 'payload_too_large',
+              sizeInMB: sizeInMB.toFixed(2),
+              limit: '4.5MB'
+            }
+          },
+          { status: 413 }
+        )
+      }
+    }
+
     const body = await request.json()
 
     const {

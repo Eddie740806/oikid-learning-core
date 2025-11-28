@@ -131,10 +131,29 @@ export default function NewAnalysisPage() {
           score: formData.score ? parseInt(formData.score) : null,
           recording_file_url: fileUrl || null,
           analyzed_by: 'manual',
-          // 保留 analysis_text 以向後兼容（合併新欄位）
-          analysis_text: `業務表現深度分析：\n${formData.performance_analysis}\n\n亮點與改進點：\n${formData.highlights_improvements}\n\n具體改善建議：\n${formData.improvement_suggestions}\n\n評分與標籤：\n${formData.score_tags}`,
+          // 不再生成 analysis_text，因為已經有分開的欄位了，避免數據重複和超過 Vercel 限制
+          analysis_text: null,
         }),
       })
+
+      // 檢查回應狀態
+      if (!response.ok) {
+        // 處理 413 錯誤（Payload Too Large）
+        if (response.status === 413) {
+          const errorData = await response.json().catch(() => ({ error: '請求數據過大' }))
+          setMessage({ 
+            type: 'error', 
+            text: errorData.error || '請求數據過大，超過伺服器限制（4.5MB）。請減少文字內容或分開提交。' 
+          })
+          setLoading(false)
+          return
+        }
+        // 處理其他錯誤
+        const errorData = await response.json().catch(() => ({ error: '發生錯誤' }))
+        setMessage({ type: 'error', text: errorData.error || '儲存失敗' })
+        setLoading(false)
+        return
+      }
 
       const result = await response.json()
 
