@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@supabase/supabase-js'
 
 export default function NewAnalysisPage() {
   const router = useRouter()
@@ -31,52 +32,55 @@ export default function NewAnalysisPage() {
   const handleFileUpload = async (fileToUpload: File) => {
     setUploading(true)
     try {
-      const formDataToUpload = new FormData()
-      formDataToUpload.append('file', fileToUpload)
+      // 檢查環境變數
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formDataToUpload,
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error('缺少 Supabase 環境變數。請檢查 Vercel 環境變數設定。')
+      }
+
+      // 在客戶端創建 Supabase 客戶端（直接上傳，繞過 Vercel 限制）
+      const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+      // 生成唯一檔案名稱
+      const timestamp = Date.now()
+      const randomString = Math.random().toString(36).substring(2, 15)
+      const fileExtension = fileToUpload.name.split('.').pop()
+      const fileName = `${timestamp}_${randomString}.${fileExtension}`
+
+      console.log('Uploading file directly to Supabase:', { 
+        fileName, 
+        size: fileToUpload.size, 
+        type: fileToUpload.type 
       })
 
-      // 檢查回應狀態
-      if (!response.ok) {
-        const contentType = response.headers.get('content-type')
-        if (contentType && contentType.includes('application/json')) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || `上傳失敗 (狀態碼: ${response.status})`)
-        } else {
-          const text = await response.text()
-          console.error('Non-JSON error response:', {
-            status: response.status,
-            statusText: response.statusText,
-            contentType,
-            body: text.substring(0, 500) // 只記錄前 500 字元
-          })
-          throw new Error(`伺服器錯誤 (狀態碼: ${response.status})。請檢查 Vercel 部署日誌或 Supabase 配置。`)
-        }
-      }
-
-      // 檢查回應是否為 JSON
-      const contentType = response.headers.get('content-type')
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await response.text()
-        console.error('Non-JSON response:', {
-          status: response.status,
-          contentType,
-          body: text.substring(0, 500)
+      // 直接上傳到 Supabase Storage（不經過 Vercel API）
+      const { data, error } = await supabase.storage
+        .from('recordings')
+        .upload(fileName, fileToUpload, {
+          contentType: fileToUpload.type || 'application/octet-stream',
+          upsert: false,
         })
-        throw new Error('伺服器回應格式錯誤。請檢查 Vercel 環境變數設定（NEXT_PUBLIC_SUPABASE_URL 和 NEXT_PUBLIC_SUPABASE_ANON_KEY）。')
+
+      if (error) {
+        console.error('Supabase storage upload error:', error)
+        throw new Error(`上傳失敗: ${error.message}`)
       }
 
-      const result = await response.json()
-
-      if (result.ok) {
-        setUploadedFileUrl(result.data.file_url)
-        return result.data.file_url
-      } else {
-        throw new Error(result.error || '上傳失敗')
+      if (!data) {
+        throw new Error('上傳成功但未返回資料')
       }
+
+      // 獲取公開 URL
+      const { data: urlData } = supabase.storage
+        .from('recordings')
+        .getPublicUrl(data.path)
+
+      console.log('Upload successful:', { fileName: data.path, url: urlData.publicUrl })
+
+      setUploadedFileUrl(urlData.publicUrl)
+      return urlData.publicUrl
     } catch (error) {
       console.error('Upload error:', error)
       setMessage({ type: 'error', text: `檔案上傳失敗: ${error instanceof Error ? error.message : '未知錯誤'}` })
