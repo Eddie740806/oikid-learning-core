@@ -4,6 +4,8 @@ import { createClient } from '@supabase/supabase-js'
 // 確保這個路由是動態的
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+// 增加 body size 限制
+export const maxDuration = 60 // 60 秒超時
 
 export async function POST(request: NextRequest) {
   try {
