@@ -62,6 +62,10 @@ export async function PUT(
       customer_name,
       analysis_text,
       analysis_json,
+      performance_analysis,
+      highlights_improvements,
+      improvement_suggestions,
+      score_tags,
       transcript,
       customer_profile,
       score,
@@ -72,10 +76,10 @@ export async function PUT(
       analyzed_by,
     } = body
 
-    // 驗證必要欄位
-    if (!analysis_text) {
+    // 驗證必要欄位（新的必填欄位）
+    if (!performance_analysis || !highlights_improvements || !improvement_suggestions || !score_tags) {
       return NextResponse.json(
-        { ok: false, error: 'analysis_text is required' },
+        { ok: false, error: '業務表現深度分析、亮點與改進點、具體改善建議、評分與標籤為必填欄位' },
         { status: 400 }
       )
     }
@@ -86,8 +90,12 @@ export async function PUT(
         recording_id: recording_id || null,
         customer_id: customer_id || null,
         customer_name: customer_name || null,
-        analysis_text,
+        analysis_text: analysis_text || null, // 保留以向後兼容
         analysis_json: analysis_json || null,
+        performance_analysis: performance_analysis || null,
+        highlights_improvements: highlights_improvements || null,
+        improvement_suggestions: improvement_suggestions || null,
+        score_tags: score_tags || null,
         transcript: transcript || null,
         customer_profile: customer_profile || null,
         score: score || null,

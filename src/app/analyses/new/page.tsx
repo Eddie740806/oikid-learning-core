@@ -9,16 +9,19 @@ export default function NewAnalysisPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   
   const [formData, setFormData] = useState({
-    analysis_text: '',
-    transcript: '',
-    customer_profile: '',
-    score: '',
-    tags: '',
-    notes: '',
-    salesperson_name: '',
-    customer_name: '',
-    customer_id: '',
-    recording_id: '',
+    performance_analysis: '', // 業務表現深度分析（必填）
+    highlights_improvements: '', // 亮點與改進點（必填）
+    improvement_suggestions: '', // 具體改善建議（必填）
+    score_tags: '', // 評分與標籤（必填）
+    transcript: '', // 逐字稿（可選）
+    customer_profile: '', // 客戶畫像（可選）
+    notes: '', // 備註（可選）
+    salesperson_name: '', // 業務名（可選）
+    customer_name: '', // 客戶名字（可選）
+    tags: '', // 標籤（可選，逗號分隔）
+    customer_id: '', // 客戶 ID（可選）
+    recording_id: '', // 錄音 ID（可選）
+    score: '', // 評分（可選，0-100）
   })
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -79,18 +82,25 @@ export default function NewAnalysisPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          analysis_text: formData.analysis_text,
+          // 新的必填欄位
+          performance_analysis: formData.performance_analysis,
+          highlights_improvements: formData.highlights_improvements,
+          improvement_suggestions: formData.improvement_suggestions,
+          score_tags: formData.score_tags,
+          // 可選欄位
           transcript: formData.transcript || null,
           customer_profile: formData.customer_profile || null,
-          score: formData.score ? parseInt(formData.score) : null,
-          tags: tags_array,
           notes: formData.notes || null,
           salesperson_name: formData.salesperson_name || null,
           customer_name: formData.customer_name || null,
+          tags: tags_array,
           customer_id: formData.customer_id || null,
           recording_id: formData.recording_id || null,
+          score: formData.score ? parseInt(formData.score) : null,
           recording_file_url: fileUrl || null,
           analyzed_by: 'manual',
+          // 保留 analysis_text 以向後兼容（合併新欄位）
+          analysis_text: `業務表現深度分析：\n${formData.performance_analysis}\n\n亮點與改進點：\n${formData.highlights_improvements}\n\n具體改善建議：\n${formData.improvement_suggestions}\n\n評分與標籤：\n${formData.score_tags}`,
         }),
       })
 
@@ -100,16 +110,19 @@ export default function NewAnalysisPage() {
         setMessage({ type: 'success', text: '分析結果已成功儲存！' })
         // 清空表單
         setFormData({
-          analysis_text: '',
+          performance_analysis: '',
+          highlights_improvements: '',
+          improvement_suggestions: '',
+          score_tags: '',
           transcript: '',
           customer_profile: '',
-          score: '',
-          tags: '',
           notes: '',
           salesperson_name: '',
           customer_name: '',
+          tags: '',
           customer_id: '',
           recording_id: '',
+          score: '',
         })
         setFile(null)
         setUploadedFileUrl(null)
@@ -153,21 +166,71 @@ export default function NewAnalysisPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6 bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
-          <div>
-            <label className="block text-sm font-medium text-black dark:text-zinc-50 mb-2">
-              分析結果 * <span className="text-zinc-500 text-xs">(從 Gemini 複製的分析文字)</span>
-            </label>
-            <textarea
-              required
-              value={formData.analysis_text}
-              onChange={(e) => setFormData({ ...formData, analysis_text: e.target.value })}
-              rows={12}
-              className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="貼上 Gemini 的分析結果..."
-            />
+          {/* 必填欄位區塊 */}
+          <div className="space-y-4 pb-4 border-b border-zinc-200 dark:border-zinc-700">
+            <h3 className="text-lg font-semibold text-black dark:text-zinc-50 mb-4">必填欄位</h3>
+            
+            <div>
+              <label className="block text-sm font-medium text-black dark:text-zinc-50 mb-2">
+                業務表現深度分析 * <span className="text-red-500">必填</span>
+              </label>
+              <textarea
+                required
+                value={formData.performance_analysis}
+                onChange={(e) => setFormData({ ...formData, performance_analysis: e.target.value })}
+                rows={6}
+                className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="輸入業務表現的深度分析..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-black dark:text-zinc-50 mb-2">
+                亮點與改進點 * <span className="text-red-500">必填</span>
+              </label>
+              <textarea
+                required
+                value={formData.highlights_improvements}
+                onChange={(e) => setFormData({ ...formData, highlights_improvements: e.target.value })}
+                rows={6}
+                className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="輸入亮點與改進點..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-black dark:text-zinc-50 mb-2">
+                具體改善建議 * <span className="text-red-500">必填</span>
+              </label>
+              <textarea
+                required
+                value={formData.improvement_suggestions}
+                onChange={(e) => setFormData({ ...formData, improvement_suggestions: e.target.value })}
+                rows={6}
+                className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="輸入具體改善建議..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-black dark:text-zinc-50 mb-2">
+                評分與標籤 * <span className="text-red-500">必填</span>
+              </label>
+              <textarea
+                required
+                value={formData.score_tags}
+                onChange={(e) => setFormData({ ...formData, score_tags: e.target.value })}
+                rows={6}
+                className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="輸入評分與標籤資訊..."
+              />
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* 可選欄位區塊 */}
+          <div className="space-y-4 pt-4">
+            <h3 className="text-lg font-semibold text-black dark:text-zinc-50 mb-4">可選欄位</h3>
+
             <div>
               <label className="block text-sm font-medium text-black dark:text-zinc-50 mb-2">
                 逐字稿（可選）
@@ -183,31 +246,29 @@ export default function NewAnalysisPage() {
 
             <div>
               <label className="block text-sm font-medium text-black dark:text-zinc-50 mb-2">
-                評分（可選）
+                客戶畫像（可選）
               </label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={formData.score}
-                onChange={(e) => setFormData({ ...formData, score: e.target.value })}
+              <textarea
+                value={formData.customer_profile}
+                onChange={(e) => setFormData({ ...formData, customer_profile: e.target.value })}
+                rows={6}
                 className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="0-100"
+                placeholder="描述客戶的特徵、需求、偏好等畫像資訊..."
               />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-black dark:text-zinc-50 mb-2">
-              客戶畫像（可選）
-            </label>
-            <textarea
-              value={formData.customer_profile}
-              onChange={(e) => setFormData({ ...formData, customer_profile: e.target.value })}
-              rows={6}
-              className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="描述客戶的特徵、需求、偏好等畫像資訊..."
-            />
+            <div>
+              <label className="block text-sm font-medium text-black dark:text-zinc-50 mb-2">
+                備註（可選）
+              </label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                rows={3}
+                className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="額外的備註..."
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -254,35 +315,17 @@ export default function NewAnalysisPage() {
 
             <div>
               <label className="block text-sm font-medium text-black dark:text-zinc-50 mb-2">
-                錄音檔（可選，最大 100MB）
+                評分（可選，0-100）
               </label>
               <input
-                type="file"
-                accept="audio/*,video/*"
-                onChange={(e) => {
-                  const selectedFile = e.target.files?.[0]
-                  if (selectedFile) {
-                    setFile(selectedFile)
-                    setUploadedFileUrl(null) // 重置已上傳的 URL
-                  }
-                }}
-                className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                type="number"
+                min="0"
+                max="100"
+                value={formData.score}
+                onChange={(e) => setFormData({ ...formData, score: e.target.value })}
+                className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="0-100"
               />
-              {file && (
-                <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-                  已選擇: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                </p>
-              )}
-              {uploadedFileUrl && (
-                <p className="mt-2 text-sm text-green-600 dark:text-green-400">
-                  ✓ 檔案已上傳
-                </p>
-              )}
-              {uploading && (
-                <p className="mt-2 text-sm text-blue-600 dark:text-blue-400">
-                  上傳中...
-                </p>
-              )}
             </div>
           </div>
 
@@ -302,15 +345,35 @@ export default function NewAnalysisPage() {
 
           <div>
             <label className="block text-sm font-medium text-black dark:text-zinc-50 mb-2">
-              備註（可選）
+              錄音檔（可選，最大 100MB）
             </label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              rows={3}
-              className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="額外的備註..."
+            <input
+              type="file"
+              accept="audio/*,video/*"
+              onChange={(e) => {
+                const selectedFile = e.target.files?.[0]
+                if (selectedFile) {
+                  setFile(selectedFile)
+                  setUploadedFileUrl(null) // 重置已上傳的 URL
+                }
+              }}
+              className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
             />
+            {file && (
+              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+                已選擇: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+              </p>
+            )}
+            {uploadedFileUrl && (
+              <p className="mt-2 text-sm text-green-600 dark:text-green-400">
+                ✓ 檔案已上傳
+              </p>
+            )}
+            {uploading && (
+              <p className="mt-2 text-sm text-blue-600 dark:text-blue-400">
+                上傳中...
+              </p>
+            )}
           </div>
 
           <div className="flex gap-4 pt-4">

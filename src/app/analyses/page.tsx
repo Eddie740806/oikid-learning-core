@@ -6,7 +6,11 @@ import { useRouter } from 'next/navigation'
 interface Analysis {
   id: string
   created_at: string
-  analysis_text: string
+  analysis_text: string | null // 保留以向後兼容
+  performance_analysis: string | null // 業務表現深度分析
+  highlights_improvements: string | null // 亮點與改進點
+  improvement_suggestions: string | null // 具體改善建議
+  score_tags: string | null // 評分與標籤
   transcript: string | null
   customer_profile: string | null
   score: number | null
@@ -419,7 +423,7 @@ export default function AnalysesPage() {
         analysis.customer_name || '',
         analysis.score !== null ? analysis.score.toString() : '',
         analysis.tags ? analysis.tags.join('; ') : '',
-        analysis.analysis_text.replace(/\n/g, ' ').replace(/,/g, '，'), // 移除換行和逗號，避免 CSV 格式問題
+        (analysis.analysis_text || analysis.performance_analysis || '').replace(/\n/g, ' ').replace(/,/g, '，'), // 移除換行和逗號，避免 CSV 格式問題
         analysis.transcript ? analysis.transcript.replace(/\n/g, ' ').replace(/,/g, '，') : '',
         analysis.customer_profile ? analysis.customer_profile.replace(/\n/g, ' ').replace(/,/g, '，') : '',
         analysis.notes ? analysis.notes.replace(/,/g, '，') : '',
@@ -480,7 +484,11 @@ export default function AnalysesPage() {
       客戶名字: analysis.customer_name || '',
       評分: analysis.score,
       標籤: analysis.tags || [],
-      分析結果: analysis.analysis_text,
+      分析結果: analysis.analysis_text || '',
+      業務表現深度分析: analysis.performance_analysis || '',
+      亮點與改進點: analysis.highlights_improvements || '',
+      具體改善建議: analysis.improvement_suggestions || '',
+      評分與標籤: analysis.score_tags || '',
       逐字稿: analysis.transcript || '',
       客戶畫像: analysis.customer_profile || '',
       備註: analysis.notes || '',
@@ -978,14 +986,60 @@ export default function AnalysesPage() {
                       </div>
                     )}
 
-                    {/* 分析結果 */}
-                    <div>
-                      <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4">
-                        分析結果：
-                      </h3>
-                      <div className="text-black dark:text-zinc-50">
-                        <div className="space-y-4">
-                          {formatAnalysisText(analysis.analysis_text)
+                    {/* 新的分析欄位 */}
+                    {analysis.performance_analysis && (
+                      <div>
+                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
+                          業務表現深度分析：
+                        </h3>
+                        <div className="text-black dark:text-zinc-50 whitespace-pre-wrap bg-zinc-50 dark:bg-zinc-800/30 rounded-lg p-4">
+                          {analysis.performance_analysis}
+                        </div>
+                      </div>
+                    )}
+
+                    {analysis.highlights_improvements && (
+                      <div>
+                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
+                          亮點與改進點：
+                        </h3>
+                        <div className="text-black dark:text-zinc-50 whitespace-pre-wrap bg-zinc-50 dark:bg-zinc-800/30 rounded-lg p-4">
+                          {analysis.highlights_improvements}
+                        </div>
+                      </div>
+                    )}
+
+                    {analysis.improvement_suggestions && (
+                      <div>
+                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
+                          具體改善建議：
+                        </h3>
+                        <div className="text-black dark:text-zinc-50 whitespace-pre-wrap bg-zinc-50 dark:bg-zinc-800/30 rounded-lg p-4">
+                          {analysis.improvement_suggestions}
+                        </div>
+                      </div>
+                    )}
+
+                    {analysis.score_tags && (
+                      <div>
+                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
+                          評分與標籤：
+                        </h3>
+                        <div className="text-black dark:text-zinc-50 whitespace-pre-wrap bg-zinc-50 dark:bg-zinc-800/30 rounded-lg p-4">
+                          {analysis.score_tags}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 分析結果（向後兼容舊資料） */}
+                    {analysis.analysis_text && !analysis.performance_analysis && (
+                      <div>
+                        <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4">
+                          分析結果：
+                        </h3>
+                        <div className="text-black dark:text-zinc-50">
+                          <div className="space-y-4">
+                            {formatAnalysisText(analysis.analysis_text)
                             .split('\n\n')
                             .filter(p => p.trim())
                             .map((paragraph, idx) => {
