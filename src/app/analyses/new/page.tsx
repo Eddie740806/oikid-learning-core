@@ -39,12 +39,34 @@ export default function NewAnalysisPage() {
         body: formDataToUpload,
       })
 
+      // 檢查回應狀態
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || `上傳失敗 (狀態碼: ${response.status})`)
+        } else {
+          const text = await response.text()
+          console.error('Non-JSON error response:', {
+            status: response.status,
+            statusText: response.statusText,
+            contentType,
+            body: text.substring(0, 500) // 只記錄前 500 字元
+          })
+          throw new Error(`伺服器錯誤 (狀態碼: ${response.status})。請檢查 Vercel 部署日誌或 Supabase 配置。`)
+        }
+      }
+
       // 檢查回應是否為 JSON
       const contentType = response.headers.get('content-type')
       if (!contentType || !contentType.includes('application/json')) {
         const text = await response.text()
-        console.error('Non-JSON response:', text)
-        throw new Error('伺服器回應格式錯誤，請檢查 Supabase Storage 配置')
+        console.error('Non-JSON response:', {
+          status: response.status,
+          contentType,
+          body: text.substring(0, 500)
+        })
+        throw new Error('伺服器回應格式錯誤。請檢查 Vercel 環境變數設定（NEXT_PUBLIC_SUPABASE_URL 和 NEXT_PUBLIC_SUPABASE_ANON_KEY）。')
       }
 
       const result = await response.json()
