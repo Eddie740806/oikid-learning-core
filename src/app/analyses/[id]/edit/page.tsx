@@ -86,6 +86,14 @@ export default function EditAnalysisPage() {
         body: formDataToUpload,
       })
 
+      // 檢查回應是否為 JSON
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text()
+        console.error('Non-JSON response:', text)
+        throw new Error('伺服器回應格式錯誤，請檢查 Supabase Storage 配置')
+      }
+
       const result = await response.json()
 
       if (result.ok) {
