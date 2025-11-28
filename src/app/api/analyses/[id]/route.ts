@@ -85,13 +85,17 @@ export async function PUT(
       )
     }
 
+    // 如果 analysis_text 為 null，從新欄位生成（資料庫要求 NOT NULL）
+    const finalAnalysisText = analysis_text || 
+      `業務表現深度分析：\n${performance_analysis}\n\n亮點與改進點：\n${highlights_improvements}\n\n具體改善建議：\n${improvement_suggestions}\n\n評分與標籤：\n${score_tags}`
+
     const { data, error } = await supabase
       .from('analyses')
       .update({
         recording_id: recording_id || null,
         customer_id: customer_id || null,
         customer_name: customer_name || null,
-        analysis_text: analysis_text || null, // 保留以向後兼容
+        analysis_text: finalAnalysisText, // 確保不為 null（資料庫要求）
         analysis_json: analysis_json || null,
         performance_analysis: performance_analysis || null,
         highlights_improvements: highlights_improvements || null,
