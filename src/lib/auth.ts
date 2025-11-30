@@ -38,7 +38,12 @@ export function createClientClient() {
     throw new Error('Missing Supabase environment variables')
   }
 
-  return createClient(supabaseUrl, supabaseAnonKey, {
+  // 使用單例模式避免多個實例
+  if (typeof window !== 'undefined' && (window as any).__supabaseClient) {
+    return (window as any).__supabaseClient
+  }
+
+  const client = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
@@ -47,6 +52,12 @@ export function createClientClient() {
       storageKey: 'supabase.auth.token',
     },
   })
+
+  if (typeof window !== 'undefined') {
+    (window as any).__supabaseClient = client
+  }
+
+  return client
 }
 
 // 獲取當前用戶（服務端，用於 API 路由）
@@ -65,10 +76,10 @@ export async function getCurrentUser(request?: NextRequest) {
     return null
   }
 
-  // 獲取用戶角色
+  // 獲取用戶角色（只查詢 role 和 email，name 欄位可能不存在）
   const { data: profile } = await supabase
     .from('user_profiles')
-    .select('role, name, email')
+    .select('role, email')
     .eq('id', user.id)
     .single()
 
@@ -76,7 +87,7 @@ export async function getCurrentUser(request?: NextRequest) {
     id: user.id,
     email: user.email,
     role: profile?.role || 'salesperson',
-    name: profile?.name || user.email,
+    name: user.email, // 使用 email 作為 name，因為 name 欄位可能不存在
   }
 }
 

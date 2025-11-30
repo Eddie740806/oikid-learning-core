@@ -28,13 +28,13 @@ export default function Navbar() {
 
       // 獲取用戶角色（從資料庫實時查詢，不依賴 JWT）
       // 使用 RPC 函數或直接查詢，確保能獲取到角色
-      let profile: { role: string; name: string; email: string } | null = null
+      let profile: { role: string; email: string } | null = null
       let profileError: any = null
 
-      // 方法 1: 直接查詢
+      // 方法 1: 直接查詢（只查詢 role 和 email，name 欄位可能不存在）
       const { data: profileData, error: queryError } = await supabase
         .from('user_profiles')
-        .select('role, name, email')
+        .select('role, email')
         .eq('id', authUser.id)
         .maybeSingle() // 使用 maybeSingle 而不是 single，避免找不到記錄時報錯
 
@@ -53,7 +53,7 @@ export default function Navbar() {
       if (!profile && !profileError) {
         const { data: profileByEmail } = await supabase
           .from('user_profiles')
-          .select('role, name, email')
+          .select('role, email')
           .eq('email', authUser.email)
           .maybeSingle()
         
@@ -71,11 +71,11 @@ export default function Navbar() {
           name: authUser.email || '',
         })
       } else if (profile) {
-        console.log('Profile loaded successfully:', { role: profile.role, name: profile.name })
+        console.log('Profile loaded successfully:', { role: profile.role, email: profile.email })
         setUser({
           email: authUser.email || '',
           role: profile.role || 'salesperson',
-          name: profile.name || authUser.email || '',
+          name: authUser.email || '', // 使用 email 作為 name，因為 name 欄位可能不存在
         })
       } else {
         console.warn('Profile not found for user:', authUser.id)
@@ -98,7 +98,7 @@ export default function Navbar() {
     
     // 監聽 auth 狀態變化，當登入狀態改變時重新載入用戶
     const supabase = createClientClient()
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         loadUser() // 重新載入用戶信息
       }

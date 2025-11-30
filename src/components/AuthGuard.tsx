@@ -22,7 +22,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
           setLoading(false)
           
           // 監聽 auth 狀態變化
-          const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: any) => {
             if (event === 'SIGNED_OUT' || !session) {
               router.push('/login')
             } else if (event === 'SIGNED_IN' && session) {
