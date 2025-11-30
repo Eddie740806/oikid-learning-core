@@ -151,6 +151,29 @@ export default function Navbar() {
               >
                 統計儀表板
               </Link>
+              {user && user.role === 'admin' && (
+                <>
+                  <span className="text-zinc-400 dark:text-zinc-600">|</span>
+                  <Link
+                    href="/admin/dashboard"
+                    className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 px-3 py-2 rounded-md text-sm font-medium"
+                  >
+                    後台管理
+                  </Link>
+                  <Link
+                    href="/admin/users"
+                    className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 px-3 py-2 rounded-md text-sm font-medium"
+                  >
+                    用戶管理
+                  </Link>
+                  <Link
+                    href="/admin/activity"
+                    className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 px-3 py-2 rounded-md text-sm font-medium"
+                  >
+                    活動追蹤
+                  </Link>
+                </>
+              )}
             </div>
           </div>
 
