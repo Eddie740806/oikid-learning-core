@@ -6,9 +6,14 @@ import { requireAuth } from '@/lib/auth-server'
 export async function GET(request: NextRequest) {
   try {
     // 檢查身份驗證
+    console.log('Stats API: Checking authentication...')
+    console.log('Authorization header:', request.headers.get('authorization') ? 'present' : 'missing')
+    
     try {
-      await requireAuth(request)
-    } catch (error) {
+      const user = await requireAuth(request)
+      console.log('Stats API: User authenticated:', user.email, user.role)
+    } catch (error: any) {
+      console.error('Stats API: Auth failed:', error.message)
       return NextResponse.json(
         { ok: false, error: 'Unauthorized. Please login first.' },
         { status: 401 }

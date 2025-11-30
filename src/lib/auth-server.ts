@@ -94,6 +94,9 @@ export async function getCurrentUser(request: NextRequest) {
     
     if (authHeader?.startsWith('Bearer ')) {
       accessToken = authHeader.replace('Bearer ', '').trim()
+      console.log('Found access token in Authorization header')
+    } else {
+      console.log('No Authorization header found')
     }
     
     // 方法 2: 如果沒有 header，嘗試從 cookie 讀取 Supabase session
@@ -132,9 +135,12 @@ export async function getCurrentUser(request: NextRequest) {
     if (!accessToken) {
       console.error('No access token found in request')
       console.error('Auth header:', authHeader ? 'present' : 'missing')
+      console.error('Auth header value:', authHeader ? authHeader.substring(0, 20) + '...' : 'N/A')
       console.error('Cookies:', request.cookies.getAll().map(c => c.name))
       return null
     }
+    
+    console.log('Access token found, length:', accessToken.length)
 
     // 使用 access token 創建 Supabase 客戶端並獲取用戶
     const supabase = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
@@ -154,8 +160,12 @@ export async function getCurrentUser(request: NextRequest) {
 
     if (error || !user) {
       console.error('Auth error:', error)
+      console.error('Error message:', error?.message)
+      console.error('Error status:', error?.status)
       return null
     }
+    
+    console.log('User authenticated:', user.id, user.email)
 
     // 獲取用戶角色（從資料庫實時查詢，不依賴 JWT）
     // 只查詢 role 和 email，name 欄位可能不存在

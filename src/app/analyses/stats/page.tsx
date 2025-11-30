@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import AuthGuard from '@/components/AuthGuard'
+import { createClientClient } from '@/lib/auth'
 
 interface StatsData {
   total: number
@@ -26,12 +28,31 @@ export default function StatsPage() {
   const fetchStats = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/analyses/stats')
+      setError(null)
+      
+      // 獲取 access token 並添加到請求頭
+      const supabase = createClientClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      const headers: HeadersInit = {}
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`
+      }
+      
+      const response = await fetch('/api/analyses/stats', {
+        credentials: 'include',
+        headers,
+      })
       const result = await response.json()
 
       if (result.ok) {
         setStats(result.data)
       } else {
+        // 如果是認證錯誤，重定向到登入頁
+        if (response.status === 401) {
+          router.push('/login')
+          return
+        }
         setError(result.error || '載入失敗')
       }
     } catch (err) {
@@ -58,67 +79,61 @@ export default function StatsPage() {
       .slice(0, n)
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-black py-8 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center py-12 text-zinc-600 dark:text-zinc-400">
-            載入中...
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-black py-8 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 p-4 rounded-lg">
-            {error}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!stats) {
-    return null
-  }
-
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black py-8 px-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-black dark:text-zinc-50 mb-2">
-                資料統計儀表板
-              </h1>
-              <p className="text-zinc-600 dark:text-zinc-400">
-                分析結果的整體統計資料
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => router.push('/analyses')}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
-              >
-                ← 返回列表
-              </button>
-              <button
-                onClick={() => router.push('/')}
-                className="bg-zinc-600 hover:bg-zinc-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
-              >
-                🏠 回到首頁
-              </button>
+    <AuthGuard>
+      {loading && (
+        <div className="min-h-screen bg-zinc-50 dark:bg-black py-8 px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center py-12 text-zinc-600 dark:text-zinc-400">
+              載入中...
             </div>
           </div>
         </div>
+      )}
 
-        {/* 總覽卡片 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
+      {error && (
+        <div className="min-h-screen bg-zinc-50 dark:bg-black py-8 px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 p-4 rounded-lg">
+              {error}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!loading && !error && stats && (
+        <div className="min-h-screen bg-zinc-50 dark:bg-black py-8 px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="mb-6">
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h1 className="text-3xl font-bold text-black dark:text-zinc-50 mb-2">
+                    資料統計儀表板
+                  </h1>
+                  <p className="text-zinc-600 dark:text-zinc-400">
+                    分析結果的整體統計資料
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => router.push('/analyses')}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+                  >
+                    ← 返回列表
+                  </button>
+                  <button
+                    onClick={() => router.push('/')}
+                    className="bg-zinc-600 hover:bg-zinc-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+                  >
+                    🏠 回到首頁
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* 總覽卡片 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
             <div className="text-sm font-medium text-zinc-600 dark:text-zinc-400 mb-2">
               總分析數
             </div>
@@ -152,12 +167,12 @@ export default function StatsPage() {
             <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
               {stats.recent30Count}
             </div>
-          </div>
-        </div>
+              </div>
+            </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* 評分分布 */}
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              {/* 評分分布 */}
+              <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
             <h2 className="text-xl font-semibold text-black dark:text-zinc-50 mb-4">
               評分分布
             </h2>
@@ -183,11 +198,11 @@ export default function StatsPage() {
                   </div>
                 )
               })}
-            </div>
-          </div>
+              </div>
+              </div>
 
-          {/* 業務統計 */}
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
+              {/* 業務統計 */}
+              <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
             <h2 className="text-xl font-semibold text-black dark:text-zinc-50 mb-4">
               業務統計（前 5 名）
             </h2>
@@ -213,31 +228,33 @@ export default function StatsPage() {
                   </div>
                 )
               })}
+              </div>
+              </div>
+            </div>
+
+            {/* 標籤統計 */}
+            <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
+              <h2 className="text-xl font-semibold text-black dark:text-zinc-50 mb-4">
+              標籤統計（前 10 名）
+              </h2>
+              <div className="flex flex-wrap gap-3">
+                {getTopTags(10).map(([tag, count]) => (
+                  <div
+                    key={tag}
+                    className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2"
+                  >
+                    <span>{tag}</span>
+                    <span className="bg-blue-200 dark:bg-blue-800 px-2 py-0.5 rounded-full">
+                      {count}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
-
-        {/* 標籤統計 */}
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold text-black dark:text-zinc-50 mb-4">
-            標籤統計（前 10 名）
-          </h2>
-          <div className="flex flex-wrap gap-3">
-            {getTopTags(10).map(([tag, count]) => (
-              <div
-                key={tag}
-                className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2"
-              >
-                <span>{tag}</span>
-                <span className="bg-blue-200 dark:bg-blue-800 px-2 py-0.5 rounded-full">
-                  {count}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
+      )}
+    </AuthGuard>
   )
 }
 
