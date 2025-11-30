@@ -148,7 +148,7 @@ export async function getCurrentUser(request: NextRequest) {
       return null
     }
 
-    // 獲取用戶角色
+    // 獲取用戶角色（從資料庫實時查詢，不依賴 JWT）
     const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
       .select('role, name, email')
@@ -156,8 +156,19 @@ export async function getCurrentUser(request: NextRequest) {
       .single()
 
     if (profileError) {
-      console.error('Profile error:', profileError)
+      console.error('Profile query error:', profileError)
+      console.error('User ID:', user.id)
+      console.error('User Email:', user.email)
+      // 即使查詢失敗，也返回用戶信息（使用默認角色）
+      return {
+        id: user.id,
+        email: user.email,
+        role: 'salesperson', // 默認角色
+        name: user.email,
+      }
     }
+
+    console.log('Profile loaded for API:', { userId: user.id, role: profile?.role })
 
     return {
       id: user.id,
