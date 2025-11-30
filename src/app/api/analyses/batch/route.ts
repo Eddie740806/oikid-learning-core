@@ -1,11 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { requireAuth, requireAdmin } from '@/lib/auth-server'
 
-// POST: 批量刪除分析結果
+// POST: 批量刪除/更新分析結果
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { ids, action } = body
+    const { action } = body
+    
+    // 檢查身份驗證
+    try {
+      // 刪除操作需要管理員權限
+      if (action === 'delete') {
+        await requireAdmin(request)
+      } else {
+        // 更新操作只需要登入
+        await requireAuth(request)
+      }
+    } catch (error: any) {
+      if (error.message.includes('Forbidden')) {
+        return NextResponse.json(
+          { ok: false, error: 'Forbidden. Admin access required for delete operations.' },
+          { status: 403 }
+        )
+      }
+      return NextResponse.json(
+        { ok: false, error: 'Unauthorized. Please login first.' },
+        { status: 401 }
+      )
+    }
+    
+    const { ids } = body
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return NextResponse.json(

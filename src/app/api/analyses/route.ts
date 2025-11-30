@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { requireAuth } from '@/lib/auth-server'
 
 // POST: 新增分析結果
 export const dynamic = 'force-dynamic'
@@ -8,6 +9,15 @@ export const maxDuration = 60
 
 export async function POST(request: NextRequest) {
   try {
+    // 檢查身份驗證
+    try {
+      await requireAuth(request)
+    } catch (error) {
+      return NextResponse.json(
+        { ok: false, error: 'Unauthorized. Please login first.' },
+        { status: 401 }
+      )
+    }
     // 檢查請求大小（Vercel 限制為 4.5MB）
     const contentLength = request.headers.get('content-length')
     if (contentLength) {
@@ -110,6 +120,15 @@ export async function POST(request: NextRequest) {
 // GET: 查詢分析結果列表
 export async function GET(request: NextRequest) {
   try {
+    // 檢查身份驗證
+    try {
+      await requireAuth(request)
+    } catch (error) {
+      return NextResponse.json(
+        { ok: false, error: 'Unauthorized. Please login first.' },
+        { status: 401 }
+      )
+    }
     const { searchParams } = new URL(request.url)
     const customer_id = searchParams.get('customer_id')
     const recording_id = searchParams.get('recording_id')

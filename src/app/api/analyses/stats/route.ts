@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { requireAuth } from '@/lib/auth-server'
 
 // GET: 取得統計資料
 export async function GET(request: NextRequest) {
   try {
+    // 檢查身份驗證
+    try {
+      await requireAuth(request)
+    } catch (error) {
+      return NextResponse.json(
+        { ok: false, error: 'Unauthorized. Please login first.' },
+        { status: 401 }
+      )
+    }
     // 取得所有分析結果
     const { data: allAnalyses, error } = await supabase
       .from('analyses')

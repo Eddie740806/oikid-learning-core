@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { requireAuth } from '@/lib/auth-server'
 
 // POST: 新增客戶
 export async function POST(request: NextRequest) {
   try {
+    // 檢查身份驗證
+    try {
+      await requireAuth(request)
+    } catch (error) {
+      return NextResponse.json(
+        { ok: false, error: 'Unauthorized. Please login first.' },
+        { status: 401 }
+      )
+    }
     const body = await request.json()
 
     // 驗證必要欄位
@@ -59,6 +69,15 @@ export async function POST(request: NextRequest) {
 // GET: 查詢客戶列表
 export async function GET(request: NextRequest) {
   try {
+    // 檢查身份驗證
+    try {
+      await requireAuth(request)
+    } catch (error) {
+      return NextResponse.json(
+        { ok: false, error: 'Unauthorized. Please login first.' },
+        { status: 401 }
+      )
+    }
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')

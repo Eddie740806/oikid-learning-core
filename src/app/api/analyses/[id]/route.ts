@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { requireAuth, requireAdmin } from '@/lib/auth-server'
 
 // GET: 取得單一分析結果
 export async function GET(
@@ -7,6 +8,15 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // 檢查身份驗證
+    try {
+      await requireAuth(request)
+    } catch (error) {
+      return NextResponse.json(
+        { ok: false, error: 'Unauthorized. Please login first.' },
+        { status: 401 }
+      )
+    }
     const { id } = await params
 
     if (!id) {
@@ -46,6 +56,15 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // 檢查身份驗證
+    try {
+      await requireAuth(request)
+    } catch (error) {
+      return NextResponse.json(
+        { ok: false, error: 'Unauthorized. Please login first.' },
+        { status: 401 }
+      )
+    }
     const { id } = await params
     const body = await request.json()
 
@@ -133,12 +152,22 @@ export async function PUT(
   }
 }
 
-// DELETE: 刪除分析結果
+// DELETE: 刪除分析結果（僅管理員）
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // 檢查身份驗證和管理員權限
+    try {
+      const { requireAdmin } = await import('@/lib/auth')
+      await requireAdmin(request)
+    } catch (error) {
+      return NextResponse.json(
+        { ok: false, error: 'Forbidden. Admin access required.' },
+        { status: 403 }
+      )
+    }
     const { id } = await params
 
     if (!id) {
