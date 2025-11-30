@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientClient } from '@/lib/auth'
 
@@ -10,6 +10,23 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
+
+  // 檢查是否已經登入
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const supabase = createClientClient()
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          router.push('/')
+          router.refresh()
+        }
+      } catch (error) {
+        console.error('Session check error:', error)
+      }
+    }
+    checkSession()
+  }, [router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,7 +46,9 @@ export default function LoginPage() {
         return
       }
 
-      if (data.user) {
+      if (data.user && data.session) {
+        // 等待 session 完全設置
+        await new Promise(resolve => setTimeout(resolve, 100))
         // 登入成功，重定向到首頁
         router.push('/')
         router.refresh()

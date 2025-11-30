@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import AuthGuard from '@/components/AuthGuard'
+import { createClientClient } from '@/lib/auth'
 
 interface Analysis {
   id: string
@@ -26,6 +28,14 @@ interface Analysis {
 }
 
 export default function AnalysesPage() {
+  return (
+    <AuthGuard>
+      <AnalysesPageContent />
+    </AuthGuard>
+  )
+}
+
+function AnalysesPageContent() {
   const router = useRouter()
   const [analyses, setAnalyses] = useState<Analysis[]>([])
   const [allAnalyses, setAllAnalyses] = useState<Analysis[]>([]) // 儲存所有資料，用於取得業務名和標籤列表
@@ -66,8 +76,17 @@ export default function AnalysesPage() {
   // 載入所有資料以取得業務名和標籤選項
   const fetchAllAnalyses = async () => {
     try {
+      const supabase = createClientClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      const headers: HeadersInit = {}
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`
+      }
+      
       const response = await fetch('/api/analyses?limit=10000', {
         credentials: 'include', // 確保發送 cookie
+        headers,
       })
       const result = await response.json()
       if (result.ok) {
@@ -343,9 +362,18 @@ export default function AnalysesPage() {
     }
 
     try {
+      const supabase = createClientClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      const headers: HeadersInit = {}
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`
+      }
+      
       const response = await fetch(`/api/analyses/${id}`, {
         method: 'DELETE',
         credentials: 'include', // 確保發送 cookie
+        headers,
       })
 
       const result = await response.json()

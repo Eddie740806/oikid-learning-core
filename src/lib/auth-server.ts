@@ -78,25 +78,96 @@ export function createServerClient(request: NextRequest) {
 
 // 獲取當前用戶（服務端，用於 API 路由）
 export async function getCurrentUser(request: NextRequest) {
-  const supabase = createServerClient(request)
-  const { data: { user }, error } = await supabase.auth.getUser()
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const supabase = createServerClient(request)
+    
+    // 方法 1: 從 Authorization header 讀取
+    const authHeader = request.headers.get('authorization')
+    let accessToken: string | undefined
+    
+    if (authHeader?.startsWith('Bearer ')) {
+      accessToken = authHeader.replace('Bearer ', '')
+    }
+    
+    // 方法 2: 從 cookie 讀取 Supabase session
+    if (!accessToken) {
+      const urlMatch = supabaseUrl.match(/https?:\/\/([^.]+)\.supabase\.co/)
+      const projectRef = urlMatch ? urlMatch[1] : ''
+      
+      if (projectRef) {
+        // 嘗試多種可能的 cookie 名稱
+        const possibleCookies = [
+          `sb-${projectRef}-auth-token`,
+          `sb-${projectRef}-auth-token-code-verifier`,
+          `supabase.auth.token`,
+        ]
+        
+        for (const cookieName of possibleCookies) {
+          const cookie = request.cookies.get(cookieName)
+          if (cookie?.value) {
+            try {
+              const sessionData = JSON.parse(cookie.value)
+              accessToken = sessionData.access_token || sessionData.accessToken || sessionData.token
+              if (accessToken) break
+            } catch {
+              // 如果不是 JSON，可能是直接的 token
+              if (cookie.value.length > 50) {
+                accessToken = cookie.value
+                break
+              }
+            }
+          }
+        }
+      }
+    }
 
-  if (error || !user) {
+    // 方法 3: 從所有 cookie 中查找包含 'access_token' 的
+    if (!accessToken) {
+      const allCookies = request.cookies.getAll()
+      for (const cookie of allCookies) {
+        if (cookie.name.includes('auth') || cookie.name.includes('supabase')) {
+          try {
+            const parsed = JSON.parse(cookie.value)
+            accessToken = parsed.access_token || parsed.accessToken || parsed.token
+            if (accessToken) break
+          } catch {
+            // 跳過非 JSON cookie
+          }
+        }
+      }
+    }
+
+    // 使用 access token 獲取用戶
+    const { data: { user }, error } = accessToken 
+      ? await supabase.auth.getUser(accessToken)
+      : await supabase.auth.getUser()
+
+    if (error || !user) {
+      console.error('Auth error:', error)
+      return null
+    }
+
+    // 獲取用戶角色
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('role, name, email')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError) {
+      console.error('Profile error:', profileError)
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      role: profile?.role || 'salesperson',
+      name: profile?.name || user.email,
+    }
+  } catch (error) {
+    console.error('getCurrentUser error:', error)
     return null
-  }
-
-  // 獲取用戶角色
-  const { data: profile } = await supabase
-    .from('user_profiles')
-    .select('role, name, email')
-    .eq('id', user.id)
-    .single()
-
-  return {
-    id: user.id,
-    email: user.email,
-    role: profile?.role || 'salesperson',
-    name: profile?.name || user.email,
   }
 }
 

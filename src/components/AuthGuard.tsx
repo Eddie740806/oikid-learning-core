@@ -13,17 +13,40 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     const checkAuth = async () => {
       try {
         const supabase = createClientClient()
+        
+        // 先檢查現有 session
         const { data: { session } } = await supabase.auth.getSession()
 
         if (session) {
           setAuthenticated(true)
+          setLoading(false)
+          
+          // 監聽 auth 狀態變化
+          const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_OUT' || !session) {
+              router.push('/login')
+            } else if (event === 'SIGNED_IN' && session) {
+              setAuthenticated(true)
+            }
+          })
+
+          return () => {
+            subscription.unsubscribe()
+          }
         } else {
-          router.push('/login')
+          // 如果沒有 session，嘗試使用 getUser（可能 session 還在設置中）
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            setAuthenticated(true)
+            setLoading(false)
+          } else {
+            router.push('/login')
+            setLoading(false)
+          }
         }
       } catch (error) {
         console.error('Auth check error:', error)
         router.push('/login')
-      } finally {
         setLoading(false)
       }
     }
