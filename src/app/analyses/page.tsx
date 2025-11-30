@@ -254,6 +254,7 @@ export default function AnalysesPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // 確保發送 cookie
         body: JSON.stringify({
           ids: Array.from(selectedIds),
           action: 'delete',
@@ -305,6 +306,7 @@ export default function AnalysesPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // 確保發送 cookie
         body: JSON.stringify({
           ids: Array.from(selectedIds),
           action: 'update',
@@ -343,6 +345,7 @@ export default function AnalysesPage() {
     try {
       const response = await fetch(`/api/analyses/${id}`, {
         method: 'DELETE',
+        credentials: 'include', // 確保發送 cookie
       })
 
       const result = await response.json()
