@@ -32,17 +32,31 @@ export default function StatsPage() {
       
       // 獲取 access token 並添加到請求頭
       const supabase = createClientClient()
-      const { data: { session } } = await supabase.auth.getSession()
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       
-      const headers: HeadersInit = {}
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`
+      if (sessionError || !session) {
+        console.error('No session found:', sessionError)
+        router.push('/login')
+        return
       }
+      
+      if (!session.access_token) {
+        console.error('No access token in session')
+        router.push('/login')
+        return
+      }
+      
+      const headers: HeadersInit = {
+        'Authorization': `Bearer ${session.access_token}`,
+      }
+      
+      console.log('Fetching stats with Authorization header')
       
       const response = await fetch('/api/analyses/stats', {
         credentials: 'include',
         headers,
       })
+      
       const result = await response.json()
 
       if (result.ok) {
@@ -50,13 +64,14 @@ export default function StatsPage() {
       } else {
         // 如果是認證錯誤，重定向到登入頁
         if (response.status === 401) {
+          console.error('Unauthorized, redirecting to login')
           router.push('/login')
           return
         }
         setError(result.error || '載入失敗')
       }
     } catch (err) {
-      console.error('Error:', err)
+      console.error('Error fetching stats:', err)
       setError('發生錯誤，請稍後再試')
     } finally {
       setLoading(false)
