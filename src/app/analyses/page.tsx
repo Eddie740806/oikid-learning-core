@@ -66,10 +66,14 @@ export default function AnalysesPage() {
   // 載入所有資料以取得業務名和標籤選項
   const fetchAllAnalyses = async () => {
     try {
-      const response = await fetch('/api/analyses?limit=10000')
+      const response = await fetch('/api/analyses?limit=10000', {
+        credentials: 'include', // 確保發送 cookie
+      })
       const result = await response.json()
       if (result.ok) {
         setAllAnalyses(result.data || [])
+      } else if (response.status === 401) {
+        router.push('/login')
       }
     } catch (err) {
       console.error('Error fetching all analyses:', err)
@@ -101,6 +105,7 @@ export default function AnalysesPage() {
   const fetchAnalyses = async () => {
     try {
       setLoading(true)
+      setError(null)
       const params = new URLSearchParams()
       
       if (filters.salesperson_name) {
@@ -116,7 +121,9 @@ export default function AnalysesPage() {
         params.append('tags', filters.tags)
       }
 
-      const response = await fetch(`/api/analyses?${params.toString()}`)
+      const response = await fetch(`/api/analyses?${params.toString()}`, {
+        credentials: 'include', // 確保發送 cookie
+      })
       const result = await response.json()
 
       if (result.ok) {
@@ -124,7 +131,13 @@ export default function AnalysesPage() {
         // 套用排序
         const sortedData = sortAnalyses(data)
         setAnalyses(sortedData)
+        setError(null)
       } else {
+        // 如果是認證錯誤，重定向到登入頁
+        if (response.status === 401) {
+          router.push('/login')
+          return
+        }
         setError(result.error || '載入失敗')
       }
     } catch (err) {

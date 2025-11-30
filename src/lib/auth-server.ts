@@ -19,27 +19,46 @@ export function createServerClient(request: NextRequest) {
   // 嘗試從多個可能的 cookie 名稱中讀取
   let accessToken: string | undefined
   
-  // 方法 1: 標準格式
+  // 方法 1: 標準格式 sb-<project-ref>-auth-token
   if (projectRef) {
     const authTokenCookie = request.cookies.get(`sb-${projectRef}-auth-token`)
-    accessToken = authTokenCookie?.value
+    if (authTokenCookie?.value) {
+      try {
+        // Supabase 將 session 存儲為 JSON
+        const sessionData = JSON.parse(authTokenCookie.value)
+        accessToken = sessionData.access_token || sessionData.accessToken
+      } catch {
+        // 如果不是 JSON，直接使用值
+        accessToken = authTokenCookie.value
+      }
+    }
   }
   
   // 方法 2: 如果標準格式找不到，嘗試從所有 cookie 中查找
   if (!accessToken) {
     const allCookies = request.cookies.getAll()
     for (const cookie of allCookies) {
-      if (cookie.name.includes('auth-token') || cookie.name.includes('access-token')) {
-        // 嘗試解析 JSON cookie
+      // 查找包含 'auth' 或 'supabase' 的 cookie
+      if (cookie.name.includes('auth') || cookie.name.includes('supabase')) {
         try {
           const parsed = JSON.parse(cookie.value)
-          accessToken = parsed.access_token || parsed.accessToken
+          accessToken = parsed.access_token || parsed.accessToken || parsed.token
         } catch {
-          // 如果不是 JSON，直接使用值
-          accessToken = cookie.value
+          // 如果不是 JSON，可能是直接的 token
+          if (cookie.value.length > 50) { // token 通常比較長
+            accessToken = cookie.value
+          }
         }
         if (accessToken) break
       }
+    }
+  }
+
+  // 方法 3: 從 Authorization header 讀取（如果客戶端手動設置）
+  if (!accessToken) {
+    const authHeader = request.headers.get('authorization')
+    if (authHeader?.startsWith('Bearer ')) {
+      accessToken = authHeader.replace('Bearer ', '')
     }
   }
 
