@@ -12,9 +12,36 @@ export function createServerClient(request: NextRequest) {
 
   // 從 cookie 中讀取 Supabase session
   // Supabase 使用 sb-<project-ref>-auth-token 格式的 cookie
-  const projectRef = supabaseUrl.split('//')[1]?.split('.')[0] || ''
-  const authTokenCookie = request.cookies.get(`sb-${projectRef}-auth-token`)
-  const accessToken = authTokenCookie?.value
+  // 提取 project ref（例如：從 https://xxxxx.supabase.co 提取 xxxxx）
+  const urlMatch = supabaseUrl.match(/https?:\/\/([^.]+)\.supabase\.co/)
+  const projectRef = urlMatch ? urlMatch[1] : ''
+  
+  // 嘗試從多個可能的 cookie 名稱中讀取
+  let accessToken: string | undefined
+  
+  // 方法 1: 標準格式
+  if (projectRef) {
+    const authTokenCookie = request.cookies.get(`sb-${projectRef}-auth-token`)
+    accessToken = authTokenCookie?.value
+  }
+  
+  // 方法 2: 如果標準格式找不到，嘗試從所有 cookie 中查找
+  if (!accessToken) {
+    const allCookies = request.cookies.getAll()
+    for (const cookie of allCookies) {
+      if (cookie.name.includes('auth-token') || cookie.name.includes('access-token')) {
+        // 嘗試解析 JSON cookie
+        try {
+          const parsed = JSON.parse(cookie.value)
+          accessToken = parsed.access_token || parsed.accessToken
+        } catch {
+          // 如果不是 JSON，直接使用值
+          accessToken = cookie.value
+        }
+        if (accessToken) break
+      }
+    }
+  }
 
   return createClient(supabaseUrl, supabaseAnonKey, {
     global: {
