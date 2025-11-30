@@ -1,6 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest } from 'next/server'
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables')
+}
+
 // 服務端 Supabase 客戶端（用於 API 路由）
 export function createServerClient(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -80,17 +87,16 @@ export function createServerClient(request: NextRequest) {
 export async function getCurrentUser(request: NextRequest) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const supabase = createServerClient(request)
     
-    // 方法 1: 從 Authorization header 讀取
+    // 方法 1: 優先從 Authorization header 讀取（客戶端會發送）
     const authHeader = request.headers.get('authorization')
     let accessToken: string | undefined
     
     if (authHeader?.startsWith('Bearer ')) {
-      accessToken = authHeader.replace('Bearer ', '')
+      accessToken = authHeader.replace('Bearer ', '').trim()
     }
     
-    // 方法 2: 從 cookie 讀取 Supabase session
+    // 方法 2: 如果沒有 header，嘗試從 cookie 讀取 Supabase session
     if (!accessToken) {
       const urlMatch = supabaseUrl.match(/https?:\/\/([^.]+)\.supabase\.co/)
       const projectRef = urlMatch ? urlMatch[1] : ''
@@ -122,26 +128,29 @@ export async function getCurrentUser(request: NextRequest) {
       }
     }
 
-    // 方法 3: 從所有 cookie 中查找包含 'access_token' 的
+    // 如果還是沒有 access token，無法驗證用戶
     if (!accessToken) {
-      const allCookies = request.cookies.getAll()
-      for (const cookie of allCookies) {
-        if (cookie.name.includes('auth') || cookie.name.includes('supabase')) {
-          try {
-            const parsed = JSON.parse(cookie.value)
-            accessToken = parsed.access_token || parsed.accessToken || parsed.token
-            if (accessToken) break
-          } catch {
-            // 跳過非 JSON cookie
-          }
-        }
-      }
+      console.error('No access token found in request')
+      console.error('Auth header:', authHeader ? 'present' : 'missing')
+      console.error('Cookies:', request.cookies.getAll().map(c => c.name))
+      return null
     }
 
-    // 使用 access token 獲取用戶
-    const { data: { user }, error } = accessToken 
-      ? await supabase.auth.getUser(accessToken)
-      : await supabase.auth.getUser()
+    // 使用 access token 創建 Supabase 客戶端並獲取用戶
+    const supabase = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    })
+
+    const { data: { user }, error } = await supabase.auth.getUser(accessToken)
 
     if (error || !user) {
       console.error('Auth error:', error)

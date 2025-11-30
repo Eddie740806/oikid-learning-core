@@ -140,8 +140,18 @@ function AnalysesPageContent() {
         params.append('tags', filters.tags)
       }
 
+      // 獲取 access token 並添加到請求頭
+      const supabase = createClientClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      const headers: HeadersInit = {}
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`
+      }
+      
       const response = await fetch(`/api/analyses?${params.toString()}`, {
         credentials: 'include', // 確保發送 cookie
+        headers,
       })
       const result = await response.json()
 
@@ -268,11 +278,20 @@ function AnalysesPageContent() {
     }
 
     try {
+      // 獲取 access token 並添加到請求頭
+      const supabase = createClientClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      }
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`
+      }
+      
       const response = await fetch('/api/analyses/batch', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         credentials: 'include', // 確保發送 cookie
         body: JSON.stringify({
           ids: Array.from(selectedIds),
