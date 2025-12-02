@@ -36,7 +36,7 @@ export default function ActivityTracker({
     
     console.log('🔍 [ActivityTracker] Setting up auth state change listener...')
     
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: string, session: any) => {
       console.log(`🔍 [ActivityTracker] Auth state changed: ${event}`, session ? 'Session present' : 'No session')
       
       // 當檢測到新的登入會話時，記錄登入活動
@@ -124,7 +124,7 @@ export default function ActivityTracker({
     // 檢查初始 session（如果用戶已經登入）
     // 改進邏輯：檢查數據庫中最近是否有登入記錄，而不是依賴 localStorage
     console.log('🔍 [ActivityTracker] Checking initial session...')
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }: { data: { session: any } }) => {
       console.log('🔍 [ActivityTracker] getSession result:', session ? 'Session found' : 'No session')
       if (session) {
         console.log('🔍 [ActivityTracker] ====== Initial session found ======')
@@ -203,7 +203,7 @@ export default function ActivityTracker({
       } else {
         console.log('🔍 [ActivityTracker] No initial session found')
       }
-    }).catch((err) => {
+    }).catch((err: any) => {
       console.error('❌ [ActivityTracker] Error in getSession:', err)
     })
 
