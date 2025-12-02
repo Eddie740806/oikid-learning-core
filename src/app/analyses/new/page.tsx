@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
+import { createClientClient } from '@/lib/auth'
+import AuthGuard from '@/components/AuthGuard'
 
 export default function NewAnalysisPage() {
   const router = useRouter()
@@ -28,6 +30,33 @@ export default function NewAnalysisPage() {
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [checkingAuth, setCheckingAuth] = useState(true)
+
+  // 檢查身份驗證狀態
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        // 清除任何之前的錯誤訊息
+        setMessage(null)
+        
+        const supabase = createClientClient()
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          setIsAuthenticated(true)
+        } else {
+          // 如果沒有 session，重定向到登入頁
+          router.push('/login')
+        }
+      } catch (error) {
+        console.error('Auth check error:', error)
+        router.push('/login')
+      } finally {
+        setCheckingAuth(false)
+      }
+    }
+    checkAuth()
+  }, [router])
 
   const handleFileUpload = async (fileToUpload: File) => {
     setUploading(true)
@@ -111,11 +140,24 @@ export default function NewAnalysisPage() {
         ? formData.tags.split(',').map((tag) => tag.trim()).filter((tag) => tag)
         : null
 
+      // 獲取 session token 用於身份驗證
+      const supabase = createClientClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        setMessage({ type: 'error', text: '請先登入' })
+        setLoading(false)
+        router.push('/login')
+        return
+      }
+
       const response = await fetch('/api/analyses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
+        credentials: 'include',
         body: JSON.stringify({
           // 新的必填欄位
           performance_analysis: formData.performance_analysis,
@@ -142,6 +184,20 @@ export default function NewAnalysisPage() {
 
       // 檢查回應狀態
       if (!response.ok) {
+        // 處理 401 錯誤（Unauthorized）
+        if (response.status === 401) {
+          const errorData = await response.json().catch(() => ({ error: 'Unauthorized. Please login first.' }))
+          setMessage({ 
+            type: 'error', 
+            text: '身份驗證失敗，請重新登入' 
+          })
+          setLoading(false)
+          // 等待 2 秒後跳轉到登入頁
+          setTimeout(() => {
+            router.push('/login')
+          }, 2000)
+          return
+        }
         // 處理 413 錯誤（Payload Too Large）
         if (response.status === 413) {
           const errorData = await response.json().catch(() => ({ error: '請求數據過大' }))
@@ -154,7 +210,8 @@ export default function NewAnalysisPage() {
         }
         // 處理其他錯誤
         const errorData = await response.json().catch(() => ({ error: '發生錯誤' }))
-        setMessage({ type: 'error', text: errorData.error || '儲存失敗' })
+        console.error('API error:', response.status, errorData)
+        setMessage({ type: 'error', text: errorData.error || `儲存失敗 (狀態碼: ${response.status})` })
         setLoading(false)
         return
       }
@@ -197,9 +254,26 @@ export default function NewAnalysisPage() {
     }
   }
 
+  // 如果正在檢查身份驗證，顯示載入中
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-zinc-600 dark:text-zinc-400">載入中...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // 如果未登入，不顯示內容（會重定向到登入頁）
+  if (!isAuthenticated) {
+    return null
+  }
+
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black py-8 px-4">
-      <div className="max-w-4xl mx-auto">
+    <AuthGuard>
+      <div className="min-h-screen bg-zinc-50 dark:bg-black py-8 px-4">
+        <div className="max-w-4xl mx-auto">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-black dark:text-zinc-50 mb-2">
             新增分析結果
@@ -471,6 +545,7 @@ export default function NewAnalysisPage() {
         </form>
       </div>
     </div>
+    </AuthGuard>
   )
 }
 
