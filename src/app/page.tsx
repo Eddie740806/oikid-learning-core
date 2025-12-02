@@ -6,7 +6,7 @@ import AuthGuard from "@/components/AuthGuard";
 export default function Home() {
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-zinc-50 dark:bg-black">
+    <div className="min-h-screen bg-zinc-50 dark:bg-black">
       <main className="max-w-4xl mx-auto py-16 px-4">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-black dark:text-zinc-50 mb-4">

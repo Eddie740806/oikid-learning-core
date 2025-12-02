@@ -310,6 +310,16 @@ export default function UsersManagementPage() {
                   ← 返回儀表板
                 </button>
                 <button
+                  onClick={() => {
+                    console.log('🔄 [Users] Manually refreshing user list...')
+                    fetchUsers()
+                  }}
+                  className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+                  title="刷新用戶列表以查看最新的登入時間"
+                >
+                  🔄 刷新
+                </button>
+                <button
                   onClick={() => setShowCreateForm(true)}
                   className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
                 >

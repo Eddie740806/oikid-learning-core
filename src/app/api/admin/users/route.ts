@@ -39,11 +39,19 @@ export async function GET(request: NextRequest) {
     const { data: users, error, count } = await query
 
     if (error) {
-      console.error('Error fetching users:', error)
+      console.error('[Users API] Error fetching users:', error)
       return NextResponse.json(
         { ok: false, error: error.message },
         { status: 400 }
       )
+    }
+
+    // 調試：檢查 last_login_at 值
+    if (users && users.length > 0) {
+      console.log('[Users API] Fetched users, checking last_login_at:')
+      users.forEach((user: any) => {
+        console.log(`[Users API] User ${user.email}: last_login_at = ${user.last_login_at || 'null'}`)
+      })
     }
 
     return NextResponse.json({

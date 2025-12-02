@@ -1061,7 +1061,7 @@ function AnalysesPageContent() {
 
                     {/* 新的分析欄位 - 使用格式化顯示 */}
                     {analysis.performance_analysis && (
-                      <div>
+                    <div>
                         <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-4">
                           業務表現深度分析：
                         </h3>

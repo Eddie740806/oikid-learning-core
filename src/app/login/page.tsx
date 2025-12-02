@@ -30,6 +30,8 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('🔐 [Login] ====== LOGIN FORM SUBMITTED ======')
+    console.log('🔐 [Login] Email:', email)
     setLoading(true)
     setError('')
 
@@ -47,9 +49,95 @@ export default function LoginPage() {
       }
 
       if (data.user && data.session) {
-        // 等待 session 完全設置
-        await new Promise(resolve => setTimeout(resolve, 100))
+        console.log('🔐 [Login] Login successful, starting activity tracking...')
+        console.log('🔐 [Login] User:', data.user.email, 'ID:', data.user.id)
+        
+        // 檢查是否已經記錄過（使用 localStorage）
+        const sessionId = data.session.access_token.substring(0, 20)
+        const storageKey = `login_recorded_${data.user.id}_${sessionId}`
+        const alreadyRecorded = typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null
+        
+        if (!alreadyRecorded) {
+          // 等待 session cookie 完全設置
+          await new Promise(resolve => setTimeout(resolve, 500))
+          
+          // 記錄登入活動（帶重試機制）
+          const userAgent = typeof window !== 'undefined' ? window.navigator.userAgent : ''
+          let loginActivityRecorded = false
+          let retryCount = 0
+          const maxRetries = 3
+          
+          console.log('📝 [Login] Attempting to record login activity...')
+          
+          while (!loginActivityRecorded && retryCount < maxRetries) {
+            try {
+              console.log(`📝 [Login] Attempt ${retryCount + 1}/${maxRetries}...`)
+              const response = await fetch('/api/admin/activity', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${data.session.access_token}`,
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                  activity_type: 'login',
+                  user_agent: userAgent,
+                }),
+              })
+              
+              if (response.ok) {
+                const result = await response.json()
+                if (result.ok) {
+                  loginActivityRecorded = true
+                  // 記錄到 localStorage
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem(storageKey, Date.now().toString())
+                    setTimeout(() => {
+                      localStorage.removeItem(storageKey)
+                    }, 60 * 60 * 1000) // 1 小時後清除
+                  }
+                  console.log('✅ [Login] Login activity recorded successfully')
+                  console.log('✅ [Login] User:', data.user.email, 'ID:', data.user.id)
+                  console.log('✅ [Login] Activity ID:', result.data?.id)
+                } else {
+                  console.warn(`⚠️ [Login] Failed to log login activity (attempt ${retryCount + 1}):`, result.error)
+                }
+              } else {
+                const errorText = await response.text()
+                console.warn(`⚠️ [Login] Failed to log login activity (attempt ${retryCount + 1}), status: ${response.status}`)
+                console.warn(`⚠️ [Login] Error details:`, errorText)
+              }
+            } catch (err: any) {
+              console.error(`❌ [Login] Error logging login activity (attempt ${retryCount + 1}):`, err)
+              console.error(`❌ [Login] Error message:`, err.message)
+            }
+            
+            if (!loginActivityRecorded && retryCount < maxRetries - 1) {
+              // 等待後重試（每次重試等待時間遞增）
+              const waitTime = 300 * (retryCount + 1)
+              console.log(`⏳ [Login] Retrying in ${waitTime}ms...`)
+              await new Promise(resolve => setTimeout(resolve, waitTime))
+              retryCount++
+            } else {
+              retryCount++
+            }
+          }
+          
+          if (!loginActivityRecorded) {
+            console.error('❌ [Login] Failed to record login activity after all retries.')
+            console.error('❌ [Login] The ActivityTracker component will attempt to record login as a backup.')
+          } else {
+            console.log('✅ [Login] All login tracking completed successfully')
+          }
+        } else {
+          console.log('⏭️ [Login] Login already recorded (from localStorage), skipping...')
+        }
+        
+        // 等待一小段時間確保日誌顯示
+        await new Promise(resolve => setTimeout(resolve, 200))
+        
         // 登入成功，重定向到首頁
+        console.log('🔄 [Login] Redirecting to home page...')
         router.push('/')
         router.refresh()
       }

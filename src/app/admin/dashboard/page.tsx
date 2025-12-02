@@ -4,6 +4,10 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import AdminGuard from '@/components/AdminGuard'
 import { createClientClient } from '@/lib/auth'
+import DateRangePicker from '@/components/admin/DateRangePicker'
+import AnomalyAlert from '@/components/admin/AnomalyAlert'
+import BusinessUsagePanel from '@/components/admin/BusinessUsagePanel'
+import ExportButton from '@/components/admin/ExportButton'
 
 interface DashboardStats {
   totalActivities: number
@@ -11,8 +15,6 @@ interface DashboardStats {
   activeUsers: number
   loginTrend: Array<{ date: string; count: number }>
   topUsers: Array<{ user_id: string; email: string; name?: string; count: number }>
-  topPages: Array<{ path: string; count: number }>
-  activityTypeDistribution: Record<string, number>
   recentActivities: Array<{
     id: string
     user_id: string
@@ -33,10 +35,12 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [days, setDays] = useState(30)
+  const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null)
+  const [dimension, setDimension] = useState<'day' | 'week' | 'month' | 'year'>('day')
 
   useEffect(() => {
     fetchStats()
-  }, [days])
+  }, [days, dateRange])
 
   const fetchStats = async () => {
     try {
@@ -50,7 +54,15 @@ export default function AdminDashboardPage() {
         return
       }
 
-      const response = await fetch(`/api/admin/activity/stats?days=${days}`, {
+      const params = new URLSearchParams()
+      if (dateRange) {
+        params.append('start_date', dateRange.start)
+        params.append('end_date', dateRange.end)
+      } else {
+        params.append('days', days.toString())
+      }
+
+      const response = await fetch(`/api/admin/activity/stats?${params.toString()}`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -105,16 +117,38 @@ export default function AdminDashboardPage() {
                   系統整體統計和活動概覽
                 </p>
               </div>
-              <div className="flex gap-3">
-                <select
-                  value={days}
-                  onChange={(e) => setDays(parseInt(e.target.value))}
-                  className="px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50"
-                >
-                  <option value="7">最近7天</option>
-                  <option value="30">最近30天</option>
-                  <option value="90">最近90天</option>
-                </select>
+              <div className="flex gap-3 items-center flex-wrap">
+                <div className="flex gap-2 items-center">
+                  <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    時間維度：
+                  </label>
+                  <select
+                    value={dimension}
+                    onChange={(e) => setDimension(e.target.value as 'day' | 'week' | 'month' | 'year')}
+                    className="px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50"
+                  >
+                    <option value="day">日</option>
+                    <option value="week">週</option>
+                    <option value="month">月</option>
+                    <option value="year">年</option>
+                  </select>
+                </div>
+                <DateRangePicker
+                  value={dateRange}
+                  onChange={setDateRange}
+                  onQuickSelect={(days) => {
+                    setDateRange(null)
+                    setDays(days)
+                  }}
+                  selectedDays={dateRange ? undefined : days}
+                />
+                {stats && (
+                  <ExportButton
+                    data={stats}
+                    filename={`dashboard_stats_${new Date().toISOString().split('T')[0]}.csv`}
+                    label="導出統計"
+                  />
+                )}
                 <button
                   onClick={() => router.push('/admin/users')}
                   className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
@@ -137,6 +171,12 @@ export default function AdminDashboardPage() {
               {error}
             </div>
           )}
+
+          {/* 異常活動提醒 */}
+          <AnomalyAlert
+            startDate={dateRange?.start}
+            endDate={dateRange?.end}
+          />
 
           {loading ? (
             <div className="text-center py-12 text-zinc-600 dark:text-zinc-400">
@@ -259,83 +299,13 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                {/* 最常訪問頁面 */}
-                <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
-                  <h2 className="text-xl font-semibold text-black dark:text-zinc-50 mb-4">
-                    最常訪問頁面（前10名）
-                  </h2>
-                  <div className="space-y-2">
-                    {stats.topPages.length > 0 ? (
-                      stats.topPages.map((page) => {
-                        const percentage = stats.totalActivities > 0
-                          ? (page.count / stats.totalActivities) * 100
-                          : 0
-                        return (
-                          <div key={page.path}>
-                            <div className="flex justify-between items-center mb-1">
-                              <span className="text-sm font-medium text-black dark:text-zinc-50 truncate">
-                                {page.path}
-                              </span>
-                              <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                                {page.count} 次
-                              </span>
-                            </div>
-                            <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">
-                              <div
-                                className="bg-green-600 h-2 rounded-full transition-all"
-                                style={{ width: `${percentage}%` }}
-                              />
-                            </div>
-                          </div>
-                        )
-                      })
-                    ) : (
-                      <div className="text-center text-zinc-500 dark:text-zinc-400 py-8">
-                        暫無數據
-                      </div>
-                    )}
-                  </div>
-                </div>
 
-                {/* 活動類型分布 */}
-                <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
-                  <h2 className="text-xl font-semibold text-black dark:text-zinc-50 mb-4">
-                    活動類型分布
-                  </h2>
-                  <div className="space-y-3">
-                    {Object.entries(stats.activityTypeDistribution).length > 0 ? (
-                      Object.entries(stats.activityTypeDistribution).map(([type, count]) => {
-                        const percentage = stats.totalActivities > 0
-                          ? (count / stats.totalActivities) * 100
-                          : 0
-                        return (
-                          <div key={type}>
-                            <div className="flex justify-between items-center mb-1">
-                              <span className="text-sm font-medium text-black dark:text-zinc-50">
-                                {getActivityTypeLabel(type)}
-                              </span>
-                              <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                                {count} 次 ({percentage.toFixed(1)}%)
-                              </span>
-                            </div>
-                            <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">
-                              <div
-                                className="bg-purple-600 h-2 rounded-full transition-all"
-                                style={{ width: `${percentage}%` }}
-                              />
-                            </div>
-                          </div>
-                        )
-                      })
-                    ) : (
-                      <div className="text-center text-zinc-500 dark:text-zinc-400 py-8">
-                        暫無數據
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+              {/* 業務使用情況 */}
+              <BusinessUsagePanel
+                startDate={dateRange?.start}
+                endDate={dateRange?.end}
+                dimension={dimension}
+              />
 
               {/* 最近活動 */}
               <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">

@@ -288,18 +288,18 @@ export default function EditAnalysisPage() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-black dark:text-zinc-50 mb-2">
+          <div>
+            <label className="block text-sm font-medium text-black dark:text-zinc-50 mb-2">
                 評分與標籤 * <span className="text-red-500">必填</span>
-              </label>
-              <textarea
-                required
+            </label>
+            <textarea
+              required
                 value={formData.score_tags}
                 onChange={(e) => setFormData({ ...formData, score_tags: e.target.value })}
                 rows={6}
-                className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="輸入評分與標籤資訊..."
-              />
+            />
             </div>
           </div>
 
@@ -322,15 +322,15 @@ export default function EditAnalysisPage() {
 
             <div>
               <label className="block text-sm font-medium text-black dark:text-zinc-50 mb-2">
-                客戶畫像（可選）
-              </label>
-              <textarea
-                value={formData.customer_profile}
-                onChange={(e) => setFormData({ ...formData, customer_profile: e.target.value })}
-                rows={6}
-                className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="描述客戶的特徵、需求、偏好等畫像資訊..."
-              />
+              客戶畫像（可選）
+            </label>
+            <textarea
+              value={formData.customer_profile}
+              onChange={(e) => setFormData({ ...formData, customer_profile: e.target.value })}
+              rows={6}
+              className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="描述客戶的特徵、需求、偏好等畫像資訊..."
+            />
             </div>
 
             <div>
@@ -434,35 +434,35 @@ export default function EditAnalysisPage() {
 
           <div>
             <label className="block text-sm font-medium text-black dark:text-zinc-50 mb-2">
-              錄音檔（可選，最大 100MB）
-            </label>
-            <input
-              type="file"
-              accept="audio/*,video/*"
-              onChange={(e) => {
-                const selectedFile = e.target.files?.[0]
-                if (selectedFile) {
-                  setFile(selectedFile)
-                  setUploadedFileUrl(null)
-                }
-              }}
-              className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            />
-            {file && (
-              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-                已選擇: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-              </p>
-            )}
-            {uploadedFileUrl && !file && (
-              <p className="mt-2 text-sm text-green-600 dark:text-green-400">
-                ✓ 現有檔案已儲存，如需更換請選擇新檔案
-              </p>
-            )}
-            {uploading && (
-              <p className="mt-2 text-sm text-blue-600 dark:text-blue-400">
-                上傳中...
-              </p>
-            )}
+                錄音檔（可選，最大 100MB）
+              </label>
+              <input
+                type="file"
+                accept="audio/*,video/*"
+                onChange={(e) => {
+                  const selectedFile = e.target.files?.[0]
+                  if (selectedFile) {
+                    setFile(selectedFile)
+                    setUploadedFileUrl(null)
+                  }
+                }}
+                className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+              {file && (
+                <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+                  已選擇: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                </p>
+              )}
+              {uploadedFileUrl && !file && (
+                <p className="mt-2 text-sm text-green-600 dark:text-green-400">
+                  ✓ 現有檔案已儲存，如需更換請選擇新檔案
+                </p>
+              )}
+              {uploading && (
+                <p className="mt-2 text-sm text-blue-600 dark:text-blue-400">
+                  上傳中...
+                </p>
+              )}
           </div>
 
           <div className="flex gap-4 pt-4">

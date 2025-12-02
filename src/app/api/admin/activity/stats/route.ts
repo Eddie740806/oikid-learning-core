@@ -10,12 +10,22 @@ export async function GET(request: NextRequest) {
 
     const supabase = createServerClient(request)
     const { searchParams } = new URL(request.url)
-    const days = parseInt(searchParams.get('days') || '30')
-
-    // 計算日期範圍
-    const endDate = new Date()
-    const startDate = new Date()
-    startDate.setDate(startDate.getDate() - days)
+    
+    // 支援自定義日期範圍或快速選擇
+    let startDate: Date
+    let endDate: Date = new Date()
+    
+    const startDateParam = searchParams.get('start_date')
+    const endDateParam = searchParams.get('end_date')
+    
+    if (startDateParam && endDateParam) {
+      startDate = new Date(startDateParam)
+      endDate = new Date(endDateParam)
+    } else {
+      const days = parseInt(searchParams.get('days') || '30')
+      startDate = new Date()
+      startDate.setDate(startDate.getDate() - days)
+    }
 
     // 1. 總活動數
     const { count: totalActivities } = await supabase
@@ -86,41 +96,7 @@ export async function GET(request: NextRequest) {
         ...data,
       }))
 
-    // 6. 最常訪問頁面（前10名）
-    const { data: pageViews } = await supabase
-      .from('user_activity_logs')
-      .select('page_path')
-      .eq('activity_type', 'page_view')
-      .not('page_path', 'is', null)
-      .gte('created_at', startDate.toISOString())
-
-    const pageViewCount: Record<string, number> = {}
-    pageViews?.forEach(view => {
-      const path = view.page_path || ''
-      pageViewCount[path] = (pageViewCount[path] || 0) + 1
-    })
-
-    const topPages = Object.entries(pageViewCount)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([path, count]) => ({
-        path,
-        count,
-      }))
-
-    // 7. 活動類型分布
-    const { data: activityTypes } = await supabase
-      .from('user_activity_logs')
-      .select('activity_type')
-      .gte('created_at', startDate.toISOString())
-
-    const activityTypeCount: Record<string, number> = {}
-    activityTypes?.forEach(activity => {
-      const type = activity.activity_type
-      activityTypeCount[type] = (activityTypeCount[type] || 0) + 1
-    })
-
-    // 8. 最近活動（最近20條）
+    // 6. 最近活動（最近20條）
     const { data: recentActivities } = await supabase
       .from('user_activity_logs')
       .select(`
@@ -143,8 +119,6 @@ export async function GET(request: NextRequest) {
           count,
         })),
         topUsers: topUsersList,
-        topPages,
-        activityTypeDistribution: activityTypeCount,
         recentActivities: recentActivities || [],
       },
     })

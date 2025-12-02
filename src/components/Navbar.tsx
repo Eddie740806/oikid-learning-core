@@ -13,9 +13,23 @@ export default function Navbar() {
   const loadUser = async () => {
     try {
       const supabase = createClientClient()
+      
+      // 先檢查 session，避免在 session 不存在時調用 getUser()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setLoading(false)
+        return
+      }
+      
       const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
 
       if (userError) {
+        // 如果是 session missing 錯誤，這是正常的（在登入過程中可能發生）
+        if (userError.message?.includes('session') || userError.message?.includes('Session')) {
+          console.log('Session not ready yet, will retry')
+          setLoading(false)
+          return
+        }
         console.error('Auth user error:', userError)
         setLoading(false)
         return
@@ -112,6 +126,32 @@ export default function Navbar() {
   const handleLogout = async () => {
     try {
       const supabase = createClientClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      // 記錄登出活動
+      if (session) {
+        try {
+          const userAgent = typeof window !== 'undefined' ? window.navigator.userAgent : ''
+          await fetch('/api/admin/activity', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              activity_type: 'logout',
+              user_agent: userAgent,
+            }),
+          }).catch(() => {
+            // 忽略錯誤，繼續登出
+          })
+        } catch (err) {
+          console.error('Error logging logout activity:', err)
+          // 不阻止登出，即使活動記錄失敗
+        }
+      }
+      
       await supabase.auth.signOut()
       router.push('/login')
       router.refresh()
