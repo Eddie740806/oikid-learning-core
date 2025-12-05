@@ -89,14 +89,27 @@ export async function getCurrentUser(request: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     
     // 方法 1: 優先從 Authorization header 讀取（客戶端會發送）
-    const authHeader = request.headers.get('authorization')
+    // Next.js headers.get() 是大小寫不敏感的，但我們也嘗試不同的寫法
+    const authHeader = request.headers.get('authorization') || 
+                      request.headers.get('Authorization') ||
+                      request.headers.get('AUTHORIZATION')
     let accessToken: string | undefined
     
-    if (authHeader?.startsWith('Bearer ')) {
-      accessToken = authHeader.replace('Bearer ', '').trim()
-      console.log('Found access token in Authorization header')
+    if (authHeader) {
+      console.log('Authorization header found:', authHeader.substring(0, 30) + '...')
+      // 處理 Bearer token（大小寫不敏感）
+      const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i)
+      if (bearerMatch) {
+        accessToken = bearerMatch[1].trim()
+        console.log('Found access token in Authorization header (Bearer format)')
+      } else if (authHeader.length > 50) {
+        // 如果沒有 Bearer 前綴，但看起來像 token，直接使用
+        accessToken = authHeader.trim()
+        console.log('Found access token in Authorization header (direct format)')
+      }
     } else {
       console.log('No Authorization header found')
+      console.log('Available headers:', Array.from(request.headers.keys()))
     }
     
     // 方法 2: 如果沒有 header，嘗試從 cookie 讀取 Supabase session
@@ -156,16 +169,24 @@ export async function getCurrentUser(request: NextRequest) {
       },
     })
 
+    console.log('Attempting to get user with token (length:', accessToken.length, ')')
     const { data: { user }, error } = await supabase.auth.getUser(accessToken)
 
-    if (error || !user) {
-      console.error('Auth error:', error)
+    if (error) {
+      console.error('Supabase getUser error:', error)
       console.error('Error message:', error?.message)
       console.error('Error status:', error?.status)
+      console.error('Error name:', error?.name)
+      // 如果 token 無效或過期，返回 null
       return null
     }
     
-    console.log('User authenticated:', user.id, user.email)
+    if (!user) {
+      console.error('No user returned from getUser')
+      return null
+    }
+    
+    console.log('User authenticated successfully:', user.id, user.email)
 
     // 獲取用戶角色（從資料庫實時查詢，不依賴 JWT）
     // 只查詢 role 和 email，name 欄位可能不存在

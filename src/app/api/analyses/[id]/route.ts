@@ -8,16 +8,25 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    console.log('=== GET /api/analyses/[id] ===')
+    console.log('Headers:', Object.fromEntries(request.headers.entries()))
+
     // 檢查身份驗證
+    let user
     try {
-      await requireAuth(request)
+      console.log('Attempting authentication...')
+      user = await requireAuth(request)
+      console.log('Authentication successful:', user.email, user.role)
     } catch (error) {
+      console.error('Authentication failed:', error)
       return NextResponse.json(
         { ok: false, error: 'Unauthorized. Please login first.' },
         { status: 401 }
       )
     }
+
     const { id } = await params
+    console.log('Fetching analysis with ID:', id)
 
     if (!id) {
       return NextResponse.json(
@@ -40,6 +49,7 @@ export async function GET(
       )
     }
 
+    console.log('Analysis fetched successfully')
     return NextResponse.json({ ok: true, data })
   } catch (error) {
     console.error('API error:', error)
@@ -105,7 +115,7 @@ export async function PUT(
     }
 
     // 如果 analysis_text 為 null，從新欄位生成（資料庫要求 NOT NULL）
-    const finalAnalysisText = analysis_text || 
+    const finalAnalysisText = analysis_text ||
       `業務表現深度分析：\n${performance_analysis}\n\n亮點與改進點：\n${highlights_improvements}\n\n具體改善建議：\n${improvement_suggestions}\n\n評分與標籤：\n${score_tags}`
 
     const { data, error } = await supabase
